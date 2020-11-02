@@ -27,7 +27,7 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 					fieldname: 'statement_or_manual',
 					fieldtype: 'Select',
 					options:  'Choose a Statement\nEnter Details Manually',
-					default: 'Choose a Statement'
+					default: 'Enter Details Manually'
 				},
 				{
 					fieldtype: 'Column Break',
@@ -140,10 +140,23 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 		const me = this;
 		this.$result.find('.list-row-container').remove();
 		$('[data-fieldname="name"]').remove();
-		me.data.map((value) => {
-			const row = $('<div class="list-row-container">').data("data", value).appendTo(me.$result).get(0);
-			new erpnext.accounts.ReconciliationRow(row, value);
-		})
+		frappe.call({
+			method:"erpnext.accounts.doctype.bank_transaction.bank_transaction.get_bank_transactions",
+			// args:{
+
+			// },
+			callback: function(r) {
+				console.log(r)
+				me.data = r.message
+				console.log(transactions)
+				me.data.map((value) => {
+					const row = $('<div class="list-row-container">').data("data", value).appendTo(me.$result).get(0);
+					new erpnext.accounts.ReconciliationRow(row, value);
+				})
+			}
+		});
+
+
 	}
 
 	render_header() {

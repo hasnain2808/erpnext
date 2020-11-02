@@ -112,3 +112,12 @@ def unclear_reference_payment(doctype, docname):
 			frappe.db.set_value(doc.payment_document, doc.payment_entry, "clearance_date", None)
 
 		return doc.payment_entry
+
+@frappe.whitelist()
+def get_bank_transactions():
+	ls =  frappe.get_list(
+		'Bank Transaction',
+		fields = ['date', 'debit', 'credit', 'currency', 'description']
+	)
+	print('ls:',ls)
+	return ls
