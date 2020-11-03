@@ -86,29 +86,54 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 						};
 					},
 					change: () => {
-						frappe.call({
-							method: "frappe.client.get",
-							args: {
-								doctype: "Bank Statement",
-								name: this.form.get_value("bank_statement"),
-							},
-							callback(r) {
-								if (r.message) {
-									console.log(r.message);
-									let selected_bank_statement = r.message;
-									me.from_date =
-										selected_bank_statement.from_date;
-									me.to_date =
-										selected_bank_statement.to_date;
-									me.opening_balance =
-										selected_bank_statement.opening_balance;
-									me.closing_balance =
-										selected_bank_statement.closing_balance;
-									me.make_reconciliation_tool();
-								}
-							},
-						});
+						this.get_selected_statement_data();
+						this.make_reconciliation_tool();
+						this.form.set_value(
+							"statement_from_date",
+							this.from_date
+						);
+						this.form.set_value("statement_to_date", this.to_date);
+						this.form.set_value(
+							"statement_opening_balance",
+							this.opening_balance
+						);
+						this.form.set_value(
+							"statement_closing_balance",
+							this.closing_balance
+						);
 					},
+				},
+				{
+					fieldtype: "Column Break",
+				},
+				{
+					fieldname: "statement_opening_balance",
+					label: __("Statement Opening Balance"),
+					fieldtype: "Currency",
+					options: "Currency",
+					read_only: 1,
+				},
+				{
+					fieldname: "statement_closing_balance",
+					label: __("Statement Closing Balance"),
+					fieldtype: "Currency",
+					options: "Currency",
+					read_only: 1,
+				},
+				{
+					fieldtype: "Column Break",
+				},
+				{
+					fieldname: "statement_from_date",
+					label: __("Statement From Date"),
+					fieldtype: "Date",
+					read_only: 1,
+				},
+				{
+					fieldname: "statement_to_date",
+					label: __("Statement To Date"),
+					fieldtype: "Date",
+					read_only: 1,
 				},
 				{
 					fieldtype: "Section Break",
@@ -178,6 +203,32 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 		this.form.make();
 	}
 
+	get_selected_statement_data() {
+		const me = this;
+		if (this.form.get_value("bank_statement")) {
+			frappe.call({
+				method: "frappe.client.get",
+				args: {
+					doctype: "Bank Statement",
+					name: this.form.get_value("bank_statement"),
+				},
+				callback(r) {
+					if (r.message) {
+						console.log(r.message);
+						let selected_bank_statement = r.message;
+						me.from_date = selected_bank_statement.from_date;
+						me.to_date = selected_bank_statement.to_date;
+						me.opening_balance =
+							selected_bank_statement.opening_balance;
+						me.closing_balance =
+							selected_bank_statement.closing_balance;
+						me.make_reconciliation_tool();
+					}
+				},
+			});
+		}
+	}
+
 	make_reconciliation_tool() {
 		const me = this;
 		$(".transaction-header").remove();
@@ -188,10 +239,6 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 
 	render() {
 		const me = this;
-		console.log(me.from_date);
-		console.log(me.to_date);
-		console.log(me.company);
-		console.log(me.bank_account);
 		this.$result.find(".list-row-container").remove();
 		$('[data-fieldname="name"]').remove();
 		if (me.from_date && me.to_date && me.bank_account) {
@@ -205,7 +252,6 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 				},
 				callback(response) {
 					me.data = response.message;
-					console.log(me.data);
 					me.data.map((value) => {
 						const row = $('<div class="list-row-container">')
 							.data("data", value)
