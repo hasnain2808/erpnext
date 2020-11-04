@@ -1,4 +1,5 @@
 frappe.provide("erpnext.accounts");
+frappe.provide('frappe.widget.utils');
 
 frappe.pages["bank-reconciliation-tool"].on_page_load = function (wrapper) {
 	new erpnext.accounts.bankReconciliationTool(wrapper);
@@ -23,23 +24,16 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 		me.form = new frappe.ui.FieldGroup({
 			fields: [
 				{
-					fieldname: "statement_or_manual",
-					fieldtype: "Select",
-					options: "Choose a Statement\nEnter Details Manually",
-					default: "Choose a Statement",
-				},
-				{
-					fieldtype: "Column Break",
-				},
-				{
 					fieldtype: "Link",
 					fieldname: "company",
 					label: __("Company"),
 					options: "Company",
-					change: () => {
-						me.company = this.form.get_value("company") || "";
-						this.make_reconciliation_tool();
-					},
+				},
+				{
+					fieldname: "statement_or_manual",
+					fieldtype: "Select",
+					options: "Choose a Statement\nEnter Details Manually",
+					default: "Choose a Statement",
 				},
 				{
 					fieldtype: "Column Break",
@@ -62,7 +56,6 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 					change: () => {
 						me.bank_account =
 							this.form.get_value("bank_account") || "";
-						this.make_reconciliation_tool();
 					},
 				},
 				{
@@ -87,105 +80,75 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 					},
 					change: () => {
 						this.get_selected_statement_data();
-						this.make_reconciliation_tool();
 						this.form.set_value(
-							"statement_from_date",
+							"bank_statement_from_date",
 							this.from_date
 						);
-						this.form.set_value("statement_to_date", this.to_date);
 						this.form.set_value(
-							"statement_opening_balance",
+							"bank_statement_to_date",
+							this.to_date
+						);
+						this.form.set_value(
+							"bank_statement_opening_balance",
 							this.opening_balance
 						);
 						this.form.set_value(
-							"statement_closing_balance",
+							"bank_statement_closing_balance",
 							this.closing_balance
 						);
+						this.make_reconciliation_tool();
+
 					},
 				},
 				{
-					fieldtype: "Column Break",
-				},
-				{
-					fieldname: "statement_opening_balance",
-					label: __("Statement Opening Balance"),
-					fieldtype: "Currency",
-					options: "Currency",
-					read_only: 1,
-				},
-				{
-					fieldname: "statement_closing_balance",
-					label: __("Statement Closing Balance"),
-					fieldtype: "Currency",
-					options: "Currency",
-					read_only: 1,
-				},
-				{
-					fieldtype: "Column Break",
-				},
-				{
-					fieldname: "statement_from_date",
-					label: __("Statement From Date"),
-					fieldtype: "Date",
-					read_only: 1,
-				},
-				{
-					fieldname: "statement_to_date",
-					label: __("Statement To Date"),
-					fieldtype: "Date",
-					read_only: 1,
-				},
-				{
 					fieldtype: "Section Break",
-					label: __("Enter Details Manually"),
-					depends_on:
-						"eval:doc.statement_or_manual=='Enter Details Manually'",
+					label: __("Bank Statement Details"),
 				},
 				{
-					fieldname: "opening_balance",
-					label: __("Opening Balance"),
+					fieldname: "bank_statement_opening_balance",
+					label: __("Bank Statement Opening Balance"),
 					fieldtype: "Currency",
 					options: "Currency",
 					change: () => {
 						me.opening_balance =
-							this.form.get_value("opening_balance") || "";
-						this.make_reconciliation_tool();
+							this.form.get_value(
+								"bank_statement_opening_balance"
+							) || "";
 					},
 				},
 				{
-					fieldname: "closing_balance",
-					label: __("Closing Balance"),
+					fieldname: "bank_statement_closing_balance",
+					label: __("Bank Statement Closing Balance"),
 					fieldtype: "Currency",
 					options: "Currency",
 					change: () => {
 						me.closing_balance =
-							this.form.get_value("closing_balance") || "";
-						this.make_reconciliation_tool();
+							this.form.get_value(
+								"bank_statement_closing_balance"
+							) || "";
 					},
 				},
 				{
 					fieldtype: "Column Break",
 				},
 				{
-					fieldname: "from_date",
-					label: __("From Date"),
+					fieldname: "bank_statement_from_date",
+					label: __("Bank Statement From Date"),
 					fieldtype: "Date",
 					change: () => {
-						me.from_date = this.form.get_value("from_date") || "";
-						this.make_reconciliation_tool();
+						me.from_date =
+							this.form.get_value("bank_statement_from_date") ||
+							"";
 					},
 				},
 				{
-					fieldname: "to_date",
-					label: __("To Date"),
+					fieldname: "bank_statement_to_date",
+					label: __("Bank Statement To Date"),
 					fieldtype: "Date",
 					change: () => {
-						me.to_date = this.form.get_value("to_date") || "";
-						this.make_reconciliation_tool();
+						me.to_date =
+							this.form.get_value("bank_statement_to_date") || "";
 					},
-				},
-				{
-					fieldtype: "Column Break",
 				},
 				{
 					fieldtype: "Section Break",
@@ -222,7 +185,6 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 							selected_bank_statement.opening_balance;
 						me.closing_balance =
 							selected_bank_statement.closing_balance;
-						me.make_reconciliation_tool();
 					}
 				},
 			});
@@ -231,20 +193,53 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 
 	make_reconciliation_tool() {
 		const me = this;
-		$(".transaction-header").remove();
-
+		$("#transactions").empty()
+		me.render_chart();
 		me.render_header();
 		me.render();
 	}
 
+	render_chart() {
+		// $(".report-summary").remove();
+		this.$summary = $(`<div class="report-summary"></div>`)
+			.hide()
+			.appendTo(this.$result);
+		var chart_data = [
+			{
+				value: 1200,
+				indicator: "Green",
+				label: "profit_label",
+				datatype: "Currency",
+				currency: "INR",
+			},
+			{
+				value: "net_income",
+				label: "income_label",
+				datatype: "Currency",
+				currency: "INR",
+			},
+			{
+				value: "net_expense",
+				label: "expense_label",
+				datatype: "Currency",
+				currency: "INR",
+			},
+		];
+
+		chart_data.forEach((summary) => {
+			frappe.widget.utils
+				.build_summary_item(summary)
+				.appendTo(this.$summary);
+		});
+		this.$summary.show();
+	}
+
 	render() {
 		const me = this;
-		this.$result.find(".list-row-container").remove();
-		$('[data-fieldname="name"]').remove();
 		if (me.from_date && me.to_date && me.bank_account) {
 			return frappe.call({
 				method:
-					"erpnext.accounts.doctype.bank_transaction.bank_transaction.get_bank_transactions",
+					"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.get_bank_transactions",
 				args: {
 					from_date: me.from_date,
 					to_date: me.to_date,
@@ -262,26 +257,11 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 				},
 			});
 		}
-
-		// frappe.call({
-		// 	method:"erpnext.accounts.doctype.bank_transaction.bank_transaction.get_bank_transactions",
-		// 	// args:{
-
-		// 	// },
-		// 	callback: function(r) {
-		// 		console.log(r)
-		// 		me.data = r.message
-		// 		console.log(transactions)
-		// 		me.data.map((value) => {
-		// 			const row = $('<div class="list-row-container">').data("data", value).appendTo(me.$result).get(0);
-		// 			new erpnext.accounts.ReconciliationRow(row, value);
-		// 		})
-		// 	}
-		// });
 	}
 
 	render_header() {
 		const me = this;
+		// $(".transaction-header").remove();
 		if ($(this.wrapper).find(".transaction-header").length === 0) {
 			me.$result.append(
 				frappe.render_template("bank_transaction_header", {})
