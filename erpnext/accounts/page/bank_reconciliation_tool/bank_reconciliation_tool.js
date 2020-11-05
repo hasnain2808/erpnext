@@ -83,23 +83,7 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 					},
 					change: function ()  {
 						me.get_selected_statement_data(this.value);
-
-						me.form.set_value(
-							"bank_statement_from_date",
-							me.bank_statement_from_date
-						);
-						me.form.set_value(
-							"bank_statement_to_date",
-							me.bank_statement_to_date
-						);
-						me.form.set_value(
-							"bank_statement_opening_balance",
-							me.bank_statement_opening_balance
-						);
-						me.form.set_value(
-							"bank_statement_closing_balance",
-							me.bank_statement_closing_balance
-						);
+						me.make_reconciliation_tool()
 					},
 				},
 				{
@@ -110,11 +94,19 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 					label: __("Bank Statement Opening Balance"),
 					fieldtype: "Currency",
 					options: "Currency",
+					read_only: "eval:doc.statement_or_manual=='Choose a Statement'",
+
 					change: () => {
+						if (me.bank_statement_opening_balance != me.form.get_value("bank_statement_opening_balance")) {
+
 						me.bank_statement_opening_balance =
 							me.form.get_value(
 								"bank_statement_opening_balance"
 							) || "";
+							if(me.form.get_value("statement_or_manual") == 'Enter Details Manually'){
+								this.make_reconciliation_tool()
+							}
+							}
 					},
 				},
 				{
@@ -124,10 +116,17 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 					options: "Currency",
 					fetch_from: "bank_statement.opening_balance",
 					change: () => {
-						me.bank_statement_closing_balance =
-							me.form.get_value(
-								"bank_statement_closing_balance"
-							) || "";
+						if (me.bank_statement_closing_balance != me.form.get_value("bank_statement_closing_balance")) {
+
+							me.bank_statement_closing_balance =
+								me.form.get_value(
+									"bank_statement_closing_balance"
+								) || "";
+							if(me.form.get_value("statement_or_manual") == 'Enter Details Manually'){
+								this.make_reconciliation_tool()
+							}
+						}
+
 					},
 				},
 				{
@@ -138,9 +137,15 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 					label: __("Bank Statement From Date"),
 					fieldtype: "Date",
 					change: () => {
+						if (me.bank_statement_from_date != me.form.get_value("bank_statement_from_date")) {
+
 						me.bank_statement_from_date =
 							this.form.get_value("bank_statement_from_date") ||
 							"";
+							if(me.form.get_value("statement_or_manual") == 'Enter Details Manually'){
+								this.make_reconciliation_tool()
+							}
+						}
 					},
 				},
 				{
@@ -148,24 +153,28 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 					label: __("Bank Statement To Date"),
 					fieldtype: "Date",
 					change: () => {
-						me.bank_statement_to_date =
-							me.form.get_value("bank_statement_to_date") || "";
+						if (me.bank_statement_to_date != me.form.get_value("bank_statement_to_date")) {
+							me.bank_statement_to_date =
+								me.form.get_value("bank_statement_to_date") || "";
+								if(me.form.get_value("statement_or_manual") == 'Enter Details Manually'){
+									this.make_reconciliation_tool()
+								}						}
 					},
 				},
 
-				{
-					fieldtype: "Section Break",
-					label: __("Make Tool"),
-				},
-				{
-					fieldname: "make_reconciliation_tool",
-					label: __("Make Reconciliation Tool"),
-					fieldtype: "Button",
-					primary: 1,
-					click: () => {
-						me.make_reconciliation_tool()
-					},
-				},
+				// {
+				// 	fieldtype: "Section Break",
+				// 	label: __("Make Tool"),
+				// },
+				// {
+				// 	fieldname: "make_reconciliation_tool",
+				// 	label: __("Make Reconciliation Tool"),
+				// 	fieldtype: "Button",
+				// 	primary: 1,
+				// 	click: () => {
+				// 		me.make_reconciliation_tool()
+				// 	},
+				// },
 				{
 					fieldtype: "Section Break",
 					label: __("Reconcile"),
@@ -175,21 +184,21 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 					fieldtype: "HTML",
 					options: `<div id = "cards"></div>`,
 				},
-				{
-					fieldname: "from_date",
-					label: __("From Date"),
-					fieldtype: "Date",
-					change: () => {
-					},
-				},
+				// {
+				// 	fieldname: "from_date",
+				// 	label: __("From Date"),
+				// 	fieldtype: "Date",
+				// 	change: () => {
+				// 	},
+				// },
 
-				{
-					fieldname: "to_date",
-					label: __("To Date"),
-					fieldtype: "Date",
-					change: () => {
-					},
-				},
+				// {
+				// 	fieldname: "to_date",
+				// 	label: __("To Date"),
+				// 	fieldtype: "Date",
+				// 	change: () => {
+				// 	},
+				// },
 				{
 					fieldname: "transactions",
 					fieldtype: "HTML",
@@ -220,6 +229,23 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 							selected_bank_statement.opening_balance;
 						me.bank_statement_closing_balance =
 							selected_bank_statement.closing_balance;
+
+						me.form.set_value(
+							"bank_statement_from_date",
+							me.bank_statement_from_date
+						);
+						me.form.set_value(
+							"bank_statement_to_date",
+							me.bank_statement_to_date
+						);
+						me.form.set_value(
+							"bank_statement_opening_balance",
+							me.bank_statement_opening_balance
+						);
+						me.form.set_value(
+							"bank_statement_closing_balance",
+							me.bank_statement_closing_balance
+						);
 					}
 				},
 			});
@@ -230,19 +256,37 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 		const me = this;
 		$("#transactions").empty();
 		$("#cards").empty();
+		// this.get_bank_balance()
+
 		me.render_chart();
 		me.render_header();
 		me.render();
+		$("#cards").scrollTop()
+	}
+
+	get_bank_balance() {
+		frappe.call({
+			method:
+				"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.get_account_balance",
+			args: {
+				bank_account: this.bank_account,
+				from_date: this.bank_statement_to_date,
+			},
+			callback(response) {
+				bal = response.messsage
+			},
+		});
 	}
 
 	render_chart() {
 		// $(".report-summary").remove();
+		const me = this;
 		this.$summary = $(`<div class="report-summary"></div>`)
 			.hide()
 			.appendTo(this.$cards);
 		var chart_data = [
 			{
-				value: 250,
+				value: me.bank_statement_closing_balance,
 				label: "Statement Ending Balance",
 				datatype: "Currency",
 				currency: "INR",

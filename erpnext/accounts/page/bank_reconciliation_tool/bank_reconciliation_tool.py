@@ -18,7 +18,7 @@ def get_bank_transactions(bank_account, from_date = None, to_date = None):
 	return transactions
 
 # @frappe.whitelist()
-# def get_opening_balance(bank_account, from_date):
+# def get_account_balance(bank_account, date):
 #     account = frappe.db.get_value('Bank Account', bank_account, 'account')
-#     account = frappe.get_doc
-# 	balance_as_per_system = get_balance_on(bank_account, from_date)
+# 	balance_as_per_system = get_balance_on(account, date)
+# 	return balance_as_per_system
