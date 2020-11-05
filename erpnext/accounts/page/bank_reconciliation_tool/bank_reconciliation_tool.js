@@ -12,13 +12,37 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 			title: __("Bank Reconciliation Tool"),
 			single_column: true,
 		});
+		this.upload_statement_button = this.page.set_secondary_action("Upload a Statemnt", ()=>{
+			this.upload_statement_dialog.show()
+		})
+
 		this.parent = wrapper;
 		this.page = this.parent.page;
-
+		this.make_upload_statement_dialog();
 		this.make_form();
 		this.$result = $("#transactions");
 		this.$cards = $("#cards");
+
 	}
+
+	make_upload_statement_dialog(){
+		const fields = [
+
+			{
+				fieldtype: "Link",
+				label: __("trans"),
+				options : "Bank Transaction",
+				fieldname: "payment_proposals",
+			},
+
+		]
+		this.upload_statement_dialog = new frappe.ui.Dialog({
+			title: __("Choose a corresponding payment"),
+			fields: fields,
+			size: "large",
+		});
+	}
+
 
 	make_form() {
 		const me = this;
@@ -29,10 +53,6 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 					fieldname: "company",
 					label: __("Company"),
 					options: "Company",
-				},
-
-				{
-					fieldtype: "Column Break",
 				},
 				{
 					fieldtype: "Link",
@@ -50,85 +70,13 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 						};
 					},
 					change: () => {
+						console.log("jdsfg")
 						me.bank_account =
 						me.form.get_value("bank_account") || "";
+						this.get_account_opening_balance()
 					},
 				},
-				{
-					fieldtype: "Section Break",
-					label: __("Bank Statement Details")
-				},
-				{
-					fieldname: "statement_or_manual",
-					fieldtype: "Select",
-					options: "Choose a Statement\nEnter Details Manually",
-					default: "Choose a Statement",
-				},
-				{
-					fieldname: "bank_statement",
-					fieldtype: "Link",
-					label: __("Bank Statement"),
-					options: "Bank Statement",
-					depends_on:
-						"eval:doc.statement_or_manual=='Choose a Statement'",
-					get_query: () => {
-						return {
-							filters: {
-								bank_account: [
-									"in",
-									[me.form.get_value("bank_account") || ""],
-								],
-							},
-						};
-					},
-					change: function ()  {
-						me.get_selected_statement_data(this.value);
-						me.make_reconciliation_tool()
-					},
-				},
-				{
-					fieldtype: "Column Break",
-				},
-				{
-					fieldname: "bank_statement_opening_balance",
-					label: __("Bank Statement Opening Balance"),
-					fieldtype: "Currency",
-					options: "Currency",
-					read_only: "eval:doc.statement_or_manual=='Choose a Statement'",
 
-					change: () => {
-						if (me.bank_statement_opening_balance != me.form.get_value("bank_statement_opening_balance")) {
-
-						me.bank_statement_opening_balance =
-							me.form.get_value(
-								"bank_statement_opening_balance"
-							) || "";
-							if(me.form.get_value("statement_or_manual") == 'Enter Details Manually'){
-								this.make_reconciliation_tool()
-							}
-							}
-					},
-				},
-				{
-					fieldname: "bank_statement_closing_balance",
-					label: __("Bank Statement Closing Balance"),
-					fieldtype: "Currency",
-					options: "Currency",
-					fetch_from: "bank_statement.opening_balance",
-					change: () => {
-						if (me.bank_statement_closing_balance != me.form.get_value("bank_statement_closing_balance")) {
-
-							me.bank_statement_closing_balance =
-								me.form.get_value(
-									"bank_statement_closing_balance"
-								) || "";
-							if(me.form.get_value("statement_or_manual") == 'Enter Details Manually'){
-								this.make_reconciliation_tool()
-							}
-						}
-
-					},
-				},
 				{
 					fieldtype: "Column Break",
 				},
@@ -138,14 +86,12 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 					fieldtype: "Date",
 					change: () => {
 						if (me.bank_statement_from_date != me.form.get_value("bank_statement_from_date")) {
-
-						me.bank_statement_from_date =
-							this.form.get_value("bank_statement_from_date") ||
-							"";
-							if(me.form.get_value("statement_or_manual") == 'Enter Details Manually'){
-								this.make_reconciliation_tool()
+							me.bank_statement_from_date =
+								me.form.get_value(
+									"bank_statement_from_date"
+								) || "";
+								this.get_account_opening_balance()
 							}
-						}
 					},
 				},
 				{
@@ -155,26 +101,39 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 					change: () => {
 						if (me.bank_statement_to_date != me.form.get_value("bank_statement_to_date")) {
 							me.bank_statement_to_date =
-								me.form.get_value("bank_statement_to_date") || "";
-								if(me.form.get_value("statement_or_manual") == 'Enter Details Manually'){
-									this.make_reconciliation_tool()
-								}						}
+								me.form.get_value(
+									"bank_statement_to_date"
+								) || "";
+						}
 					},
 				},
+				{
+					fieldtype: "Column Break",
+				},
+				{
+					fieldname: "account_opening_balance",
+					label: __("Account Opening Balance"),
+					fieldtype: "Currency",
+					options: "Currency",
+					read_only: 1,
+				},
+				{
+					fieldname: "bank_statement_closing_balance",
+					label: __("Bank Statement Closing Balance"),
+					fieldtype: "Currency",
+					options: "Currency",
+					change: () => {
+						if (me.bank_statement_closing_balance != me.form.get_value("bank_statement_closing_balance")) {
 
-				// {
-				// 	fieldtype: "Section Break",
-				// 	label: __("Make Tool"),
-				// },
-				// {
-				// 	fieldname: "make_reconciliation_tool",
-				// 	label: __("Make Reconciliation Tool"),
-				// 	fieldtype: "Button",
-				// 	primary: 1,
-				// 	click: () => {
-				// 		me.make_reconciliation_tool()
-				// 	},
-				// },
+							me.bank_statement_closing_balance =
+								me.form.get_value(
+									"bank_statement_closing_balance"
+								) || "";
+								this.make_reconciliation_tool()
+						}
+
+					},
+				},
 				{
 					fieldtype: "Section Break",
 					label: __("Reconcile"),
@@ -184,21 +143,6 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 					fieldtype: "HTML",
 					options: `<div id = "cards"></div>`,
 				},
-				// {
-				// 	fieldname: "from_date",
-				// 	label: __("From Date"),
-				// 	fieldtype: "Date",
-				// 	change: () => {
-				// 	},
-				// },
-
-				// {
-				// 	fieldname: "to_date",
-				// 	label: __("To Date"),
-				// 	fieldtype: "Date",
-				// 	change: () => {
-				// 	},
-				// },
 				{
 					fieldname: "transactions",
 					fieldtype: "HTML",
@@ -207,7 +151,6 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 			],
 			body: me.page.body,
 		});
-
 		me.form.make();
 	}
 
@@ -257,26 +200,54 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 		$("#transactions").empty();
 		$("#cards").empty();
 		// this.get_bank_balance()
-
+		me.get_account_closing_balance()
 		me.render_chart();
 		me.render_header();
 		me.render();
 		$("#cards").scrollTop()
 	}
 
-	get_bank_balance() {
-		frappe.call({
-			method:
-				"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.get_account_balance",
-			args: {
-				bank_account: this.bank_account,
-				from_date: this.bank_statement_to_date,
-			},
-			callback(response) {
-				bal = response.messsage
-			},
-		});
+	get_account_opening_balance() {
+		const me = this
+		if (this.bank_account && this.bank_statement_from_date){
+			frappe.call({
+				method:
+					"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.get_account_balance",
+				args: {
+					bank_account: this.bank_account,
+					till_date: me.bank_statement_from_date,
+				},
+				callback(response) {
+					me.account_opening_balance = response.message;
+					console.log(me.account_balance)
+					me.form.set_value(
+						"account_opening_balance",
+						me.account_opening_balance
+					);
+				},
+			});
+		}
 	}
+
+
+	get_account_closing_balance() {
+		const me = this
+		if (this.bank_account && this.bank_statement_from_date){
+			frappe.call({
+				method:
+					"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.get_account_balance",
+				args: {
+					bank_account: this.bank_account,
+					till_date: me.bank_statement_to_date,
+				},
+				callback(response) {
+					me.account_closing_balance = response.message;
+
+				},
+			});
+		}
+	}
+
 
 	render_chart() {
 		// $(".report-summary").remove();
@@ -292,14 +263,14 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 				currency: "INR",
 			},
 			{
-				value: 500,
+				value: me.account_closing_balance,
 				label: "Cleared Balance",
 				datatype: "Currency",
 				currency: "INR",
 			},
 			{
-				indicator: "Green",
-				value: 0,
+				indicator: me.bank_statement_closing_balance - me.account_closing_balance?"Green" : "Red" ,
+				value: me.bank_statement_closing_balance - me.account_closing_balance,
 				label: "Difference",
 				datatype: "Currency",
 				currency: "INR",
