@@ -12,8 +12,6 @@
   "company",
   "bank",
   "bank_account",
-  "transactions_section",
-  "items",
   "amended_from",
   "balances_section",
   "opening_balance",
@@ -65,18 +63,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "transactions_section",
-   "fieldtype": "Section Break",
-   "label": "Transactions"
-  },
-  {
-   "fieldname": "items",
-   "fieldtype": "Table",
-   "label": "Items",
-   "options": "Bank Statement Item",
-   "reqd": 1
-  },
-  {
    "fieldname": "balances_section",
    "fieldtype": "Section Break",
    "label": "Balances"
@@ -106,7 +92,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2020-10-26 13:50:23.488757",
+ "modified": "2020-11-04 21:14:53.885457",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Bank Statement",

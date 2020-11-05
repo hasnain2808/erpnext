@@ -10,6 +10,9 @@ frappe.ui.form.on('Bank Transaction', {
 				}
 			};
 		});
+	},
+	bank_account: function(frm) {
+		set_bank_statement_filter(frm)
 	}
 });
 
@@ -30,3 +33,13 @@ const update_clearance_date = (frm, cdt, cdn) => {
 			});
 	}
 };
+
+function set_bank_statement_filter(frm){
+	frm.set_query("bank_statement", function () {
+		return {
+			"filters": {
+				"bank_account": frm.doc.bank_account
+			}
+		};
+	});
+}

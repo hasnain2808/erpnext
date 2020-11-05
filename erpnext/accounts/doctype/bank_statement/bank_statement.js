@@ -8,7 +8,7 @@ frappe.ui.form.on('Bank Statement', {
 	company: function(frm){
 		set_bank_account_filter(frm)
 	},
-	bank:function(frm) {
+	bank: function(frm) {
 		set_bank_account_filter(frm)
 	}
 });
