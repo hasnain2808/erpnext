@@ -12,7 +12,7 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 			title: __("Bank Reconciliation Tool"),
 			single_column: true,
 		});
-		this.upload_statement_button = this.page.set_secondary_action("Upload a Statemnt", ()=>{
+		this.upload_statement_button = this.page.set_secondary_action(__("Upload a Statement"), ()=>{
 			this.upload_statement_dialog.show()
 		})
 
