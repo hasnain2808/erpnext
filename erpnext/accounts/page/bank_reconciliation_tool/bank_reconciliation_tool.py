@@ -11,7 +11,9 @@ def get_bank_transactions(bank_account, from_date = None, to_date = None):
 		filters.append(['date' ,'>=', from_date])
 	transactions = frappe.get_list(
 		'Bank Transaction',
-		fields = ['date', 'debit', 'credit', 'currency', 'description', 'name', 'bank_account', 'company'],
+		fields = ['date', 'debit', 'credit', 'currency', 
+		'description', 'name', 'bank_account', 'company',
+		'reference_number', 'transaction_id'],
 		filters = filters
 	)
 	print(len(transactions))

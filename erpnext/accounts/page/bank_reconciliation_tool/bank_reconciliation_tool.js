@@ -136,6 +136,7 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 				},
 				{
 					fieldtype: "Section Break",
+					fieldname: "section_break_1",
 					label: __("Reconcile"),
 				},
 				{
@@ -148,6 +149,7 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 					fieldtype: "HTML",
 					options: `<div id = "transactions"></div>`,
 				},
+
 			],
 			body: me.page.body,
 		});
@@ -200,11 +202,12 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 		$("#transactions").empty();
 		$("#cards").empty();
 		// this.get_bank_balance()
-		me.get_account_closing_balance()
-		me.render_chart();
-		me.render_header();
-		me.render();
-		$("#cards").scrollTop()
+		me.get_account_closing_balance().then( () => {
+			me.render_chart();
+			me.render_header();
+			me.render();
+			$("#cards").scrollTop()
+		});
 	}
 
 	get_account_opening_balance() {
@@ -233,7 +236,7 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 	get_account_closing_balance() {
 		const me = this
 		if (this.bank_account && this.bank_statement_from_date){
-			frappe.call({
+			return frappe.call({
 				method:
 					"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.get_account_balance",
 				args: {
@@ -340,6 +343,7 @@ erpnext.accounts.ReconciliationRow = class ReconciliationRow {
 		$(me.row).on("click", ".clickable-section", function () {
 			me.bank_entry = $(this).attr("data-name");
 			me.show_dialog($(this).attr("data-name"));
+			// me.make_edit_bank_transaction_dialog($(this).attr("data-name"))
 		});
 
 		$(me.row).on("click", ".new-reconciliation", function () {
@@ -389,6 +393,84 @@ erpnext.accounts.ReconciliationRow = class ReconciliationRow {
 		frappe.new_doc("Expense Claim");
 	}
 
+	make_edit_bank_transaction_dialog(data){
+		const me = this;
+
+		const fields = [
+			{
+				fieldname: "date",
+				fieldtype: "Date",
+				label: "Date"
+			},
+			{
+				fieldname: "bank_account",
+				fieldtype: "Link",
+				label: "Bank Account",
+				options: "Bank Account",
+			},
+			// {
+			// 	fieldname: "name",
+			// 	fieldtype: "Name",
+			// 	label: "Name"
+			// },
+
+				{
+					fieldtype: "Column Break",
+					fieldname: "column_break_1",
+				},
+				{
+					fieldname: "debit",
+					fieldtype: "Currency",
+					label: "Debit"
+				},
+				{
+					fieldname: "credit",
+					fieldtype: "Currency",
+					label: "Credit"
+				},
+				{
+					fieldtype: "Section Break",
+					fieldname: "section_break_1",
+					label: __("Description"),
+				},
+				{
+					fieldname: "description",
+					fieldtype: "Small Text",
+					label: "Description"
+				},
+				{
+					fieldname: "party_section",
+					fieldtype: "Section Break",
+					label: "Party Section"
+				},
+				{
+					fieldname: "party_type",
+					fieldtype: "Link",
+					label: "Party Type",
+					options: "DocType",
+				},
+				{
+					fieldtype: "Column Break",
+					fieldname: "column_break_2",
+				},
+				{
+					fieldname: "party",
+					fieldtype: "Dynamic Link",
+					label: "Party",
+					options: "party_type"
+				}
+		]
+
+		me.edit_bank_transaction_dialog = new frappe.ui.Dialog({
+			title: __("Update Bank Transaction"),
+			fields: fields,
+			size: "large",
+		});
+
+		me.edit_bank_transaction_dialog.show();
+
+	}
+
 	show_dialog(data) {
 		const me = this;
 
@@ -414,6 +496,8 @@ erpnext.accounts.ReconciliationRow = class ReconciliationRow {
 				me.make_dialog(result);
 			});
 	}
+
+
 
 	make_dialog(data) {
 		const me = this;
@@ -543,10 +627,80 @@ erpnext.accounts.ReconciliationRow = class ReconciliationRow {
 				fieldtype: "HTML",
 				fieldname: "payment_details",
 			},
+
+			{
+				fieldtype: "Section Break",
+				fieldname: "section_break_3",
+				label: "Description",
+				"collapsible": 1,
+
+			},
+
+			{
+				fieldname: "description",
+				fieldtype: "Small Text",
+				read_only: 1
+			},
+			{
+				fieldtype: "Section Break",
+				fieldname: "section_break_4",
+				label: "Update Bank Transaction Create Vouchers",
+				"collapsible": 1,
+
+			},
+			{
+				fieldname: "party_type",
+				fieldtype: "Link",
+				label: "Party Type",
+				options: "DocType",
+			},
+
+			{
+				fieldname: "party",
+				fieldtype: "Dynamic Link",
+				label: "Party",
+				options: "party_type"
+			},
+			{
+				fieldname: "reference_number",
+				fieldtype: "Data",
+				label: "Reference Number",
+			},
+			{
+				fieldtype: "Column Break",
+				fieldname: "column_break_2",
+			},
+			{
+				fieldname: "update_transaction_button",
+				fieldtype: "Button",
+				label: "Update Transaction",
+				// options: "Butto",
+			},
+			{
+				fieldname: "create_new_payment",
+				fieldtype: "Button",
+				label: "Create New Payment",
+				click: () => {frappe.confirm('Create new Payment Entry?',
+				() => {
+					// action to perform if Yes is selected
+				}, () => {
+					// action to perform if No is selected
+				})}
+			},
+			{
+				fieldname: "create_new_expense",
+				fieldtype: "Button",
+				label: "Create New Expense",
+				click: () => {frappe.confirm('Create new Expense?',
+				() => {
+					// action to perform if Yes is selected
+				}, () => {
+					// action to perform if No is selected
+				})}			},
 		];
 
 		me.dialog = new frappe.ui.Dialog({
-			title: __("Choose a corresponding payment"),
+			title: __("Actions"),
 			fields: fields,
 			size: "large",
 		});
