@@ -121,6 +121,7 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 		const me = this;
 		const file_name = me.upload_statement_dialog.get_value("import_bank_transactions")
 		const template_options = me.upload_statement_dialog.get_value("template_options")
+		const data_import_id = me.upload_statement_dialog.get_value("data_import_id")
 		// frm.toggle_display('section_import_preview', frm.has_import_file());
 		// if (!frm.has_import_file()) {
 		// 	frm.get_field('import_preview').$wrapper.empty();
@@ -141,7 +142,7 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 				method: 'erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.get_importer_preview',
 				args: {
 					import_file_path: file_name,
-					data_import: this.upload_statement_dialog.get_value('data_import_id') ,
+					data_import: data_import_id ,
 					template_options: template_options
 				},
 				error: {
@@ -152,8 +153,8 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 			})
 			.then(r => {
 				let preview_data = r.message["preview"];
-				this.upload_statement_dialog.set_value('data_import_id', r.message["import_name"]);
-				this.show_import_preview(this.upload_statement_dialog, preview_data)
+				me.upload_statement_dialog.set_value('data_import_id', r.message["import_name"]);
+				me.show_import_preview(me.upload_statement_dialog, preview_data)
 				console.log(preview_data)
 			});
 	}
@@ -187,7 +188,6 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 						frm.set_value('template_options', JSON.stringify(template_options));
 						// frm.save().then(() => frm.trigger('import_file'));
 						console.log(frm.get_value('template_options'))
-						frm.get_field('template_options').refresh()
 						me.show_preview()
 					}
 				}

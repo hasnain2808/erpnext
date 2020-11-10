@@ -1,6 +1,7 @@
 import frappe
 from erpnext.accounts.utils import get_balance_on
 from frappe.core.doctype.data_import.importer import Importer
+from frappe.model.document import Document
 
 
 @frappe.whitelist()
@@ -35,13 +36,28 @@ def get_importer_preview(import_file_path, data_import=None, template_options=No
 	if(data_import):
 		frappe.db.set_value('Data Import', data_import, 'template_options', template_options)
 
-		dat_data_import = frappe.get_doc(doctype="Data Import",name = data_import)
+		print(frappe.db.get_value('Data Import', data_import, 'template_options'))
+		# dat_data_import = frappe.get_all("Data Import",
+		# 	filters={
+		# 		'name': data_import
+		# 	},
+		# 	as_list = False
+		# )[0]
+
+		# dat_data_import['doctype'] = "Data Import"
+		# del dat_data_import['name']
+		# dat_data_import = frappe.get_doc(dat_data_import)
+
+		dat_data_import = Document("Data Import", data_import)
+
+		print(dat_data_import)
+		print(dat_data_import.template_options)
+
 		# dat_data_import.save()
 		importer = Importer("Bank Transaction", data_import=dat_data_import, file_path = import_file_path)
 	else:
 		importer = Importer("Bank Transaction", file_path = import_file_path)
 	preview = importer.get_data_for_import_preview()
-	print(importer.data_import)
 	if(not data_import):
 		importer.data_import.import_type = "Insert New Records"
 		importer.data_import.reference_doctype = "Bank Transaction"
@@ -50,7 +66,5 @@ def get_importer_preview(import_file_path, data_import=None, template_options=No
 		importer.data_import.template_options = template_options
 		importer.data_import.save()
 
-	print(importer.data_import.name)
-	print(preview)
 	# return [preview, importer.data_import.name]
 	return {"preview":preview, "import_name": importer.data_import.name}
