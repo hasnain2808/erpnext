@@ -69,7 +69,7 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 				hidden:1,
 				change: () => {
 					console.log(this.upload_statement_dialog.get_value("import_bank_transactions"));
-					this.show_preview(this.upload_statement_dialog.get_value("import_bank_transactions"))
+					this.show_preview()
 				}
 				// get_query: () => {
 				// 	return {
@@ -82,6 +82,32 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 				// 	};
 				// }
 			},
+			{
+				fieldname: "import_log",
+				fieldtype: "Code",
+				label: "Import Log",
+				options: "JSON"
+			   },
+			{
+				fieldname: "import_preview",
+				fieldtype: "HTML",
+				label: "Import Preview"
+			   },
+			   {
+				fieldname: "template_options",
+				fieldtype: "Code",
+				hidden: 1,
+				label: "Template Options",
+				options: "JSON",
+				read_only: 1
+			   },
+			   {
+				fieldname: "data_import_id",
+				fieldtype: "Data",
+				hidden: 1,
+				label: "Data Import ID",
+				read_only: 1
+			   },
 
 		]
 		this.upload_statement_dialog = new frappe.ui.Dialog({
@@ -91,8 +117,82 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 		});
 	}
 
-	show_preview(file_name){
+	show_preview(){
+		const me = this;
+		const file_name = me.upload_statement_dialog.get_value("import_bank_transactions")
+		const template_options = me.upload_statement_dialog.get_value("template_options")
+		// frm.toggle_display('section_import_preview', frm.has_import_file());
+		// if (!frm.has_import_file()) {
+		// 	frm.get_field('import_preview').$wrapper.empty();
+		// 	return;
+		// } else {
+		// 	frm.trigger('update_primary_action');
+		// }
 
+		// load import preview
+		this.upload_statement_dialog.get_field('import_preview').$wrapper.empty();
+		$('<span class="text-muted">')
+			.html(__('Loading import file...'))
+			.appendTo(this.upload_statement_dialog.get_field('import_preview').$wrapper);
+
+
+
+		frappe.call({
+				method: 'erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.get_importer_preview',
+				args: {
+					import_file_path: file_name,
+					data_import: this.upload_statement_dialog.get_value('data_import_id') ,
+					template_options: template_options
+				},
+				error: {
+					TimestampMismatchError() {
+						// ignore this error
+					}
+				}
+			})
+			.then(r => {
+				let preview_data = r.message["preview"];
+				this.upload_statement_dialog.set_value('data_import_id', r.message["import_name"]);
+				this.show_import_preview(this.upload_statement_dialog, preview_data)
+				console.log(preview_data)
+			});
+	}
+
+	show_import_preview(frm, preview_data) {
+		const me = this;
+		let import_log = JSON.parse(frm.get_value('import_log') || '[]');
+;
+
+		if (
+			frm.import_preview &&
+			frm.import_preview.doctype === frm.get_value('reference_doctype')
+		) {
+			frm.import_preview.preview_data = preview_data;
+			frm.import_preview.import_log = import_log;
+			frm.import_preview.refresh();
+			return;
+		}
+		frappe.require('/assets/js/data_import_tools.min.js', () => {
+			frm.import_preview = new frappe.data_import.ImportPreview({
+				wrapper: frm.get_field('import_preview').$wrapper,
+				doctype: "Bank Transaction",
+				preview_data,
+				import_log,
+				frm,
+				events: {
+					remap_column(changed_map) {
+						let template_options = JSON.parse(frm.get_value('template_options') || '{}');
+						template_options.column_to_field_map = template_options.column_to_field_map || {};
+						Object.assign(template_options.column_to_field_map, changed_map);
+						frm.set_value('template_options', JSON.stringify(template_options));
+						// frm.save().then(() => frm.trigger('import_file'));
+						console.log(frm.get_value('template_options'))
+						frm.get_field('template_options').refresh()
+						me.show_preview()
+					}
+				}
+			});
+		});
 	}
 
 	make_form() {
