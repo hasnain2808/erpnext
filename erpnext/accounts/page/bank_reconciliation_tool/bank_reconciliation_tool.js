@@ -68,7 +68,6 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 				label: __("Import Bank Transactions"),
 				hidden:1,
 				change: () => {
-					console.log(this.upload_statement_dialog.get_value("import_bank_transactions"));
 					this.show_preview()
 				}
 				// get_query: () => {
@@ -93,14 +92,14 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 				fieldtype: "HTML",
 				label: "Import Preview"
 			   },
-			   {
-				fieldname: "template_options",
-				fieldtype: "Code",
-				hidden: 1,
-				label: "Template Options",
-				options: "JSON",
-				read_only: 1
-			   },
+			//    {
+			// 	fieldname: "template_options",
+			// 	fieldtype: "Code",
+			// 	hidden: 1,
+			// 	label: "Template Options",
+			// 	options: "JSON",
+			// 	read_only: 1
+			//    },
 			   {
 				fieldname: "data_import_id",
 				fieldtype: "Data",
@@ -114,13 +113,15 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 			title: __("Upload Bank statements"),
 			fields: fields,
 			size: "large",
+			primary_action: values => {
+				dialog.hide();
+			}
 		});
 	}
 
 	show_preview(){
 		const me = this;
 		const file_name = me.upload_statement_dialog.get_value("import_bank_transactions")
-		const template_options = me.upload_statement_dialog.get_value("template_options")
 		const data_import_id = me.upload_statement_dialog.get_value("data_import_id")
 		// frm.toggle_display('section_import_preview', frm.has_import_file());
 		// if (!frm.has_import_file()) {
@@ -143,7 +144,7 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 				args: {
 					import_file_path: file_name,
 					data_import: data_import_id ,
-					template_options: template_options
+					template_options: me.template_options
 				},
 				error: {
 					TimestampMismatchError() {
@@ -155,7 +156,6 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 				let preview_data = r.message["preview"];
 				me.upload_statement_dialog.set_value('data_import_id', r.message["import_name"]);
 				me.show_import_preview(me.upload_statement_dialog, preview_data)
-				console.log(preview_data)
 			});
 	}
 
@@ -182,12 +182,15 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 				frm,
 				events: {
 					remap_column(changed_map) {
-						let template_options = JSON.parse(frm.get_value('template_options') || '{}');
+						console.log(changed_map)
+						let template_options = JSON.parse(me.template_options || '{}');
+						console.log(frm.get_value('template_options'))
 						template_options.column_to_field_map = template_options.column_to_field_map || {};
 						Object.assign(template_options.column_to_field_map, changed_map);
-						frm.set_value('template_options', JSON.stringify(template_options));
-						// frm.save().then(() => frm.trigger('import_file'));
-						console.log(frm.get_value('template_options'))
+						console.log(template_options.column_to_field_map)
+						me.template_options = JSON.stringify(template_options);
+						console.log(me.template_options)
+						console.log(me.template_options)
 						me.show_preview()
 					}
 				}
@@ -221,7 +224,6 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 						};
 					},
 					change: () => {
-						console.log("jdsfg")
 						me.bank_account =
 						me.form.get_value("bank_account") || "";
 						this.get_account_opening_balance()
@@ -373,7 +375,6 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 				},
 				callback(response) {
 					me.account_opening_balance = response.message;
-					console.log(me.account_balance)
 					me.form.set_value(
 						"account_opening_balance",
 						me.account_opening_balance
