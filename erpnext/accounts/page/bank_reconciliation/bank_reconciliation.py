@@ -363,3 +363,4 @@ def sales_invoices_query(doctype, txt, searchfield, start, page_len, filters):
 			'page_len': page_len
 		}
 	)
+

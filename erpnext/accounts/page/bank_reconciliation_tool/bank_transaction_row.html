@@ -1,16 +1,16 @@
 <div class="list-row transaction-item">
 	<div>
 		<div class="clickable-section" data-name={{ name }}>
-			<div class="col-sm-2 ellipsis hidden-xs">
+			<div class="col-sm-1 ellipsis hidden-xs">
 				{%= frappe.datetime.str_to_user(date) %}
 			</div>
-			<div class="col-xs-8 col-sm-4 ellipsis list-subject">
+			<div class="col-xs-8 col-sm-6 ellipsis">
 				{{ description }}
 			</div>
-			<div class="col-sm-2 ellipsis hidden-xs">
+			<div class="col-sm-1 ellipsis hidden-xs">
 				{%= format_currency(debit, currency) %}
 			</div>
-			<div class="col-sm-2 ellipsis hidden-xs">
+			<div class="col-sm-1 ellipsis hidden-xs">
 				{%= format_currency(credit, currency) %}
 			</div>
 			<div class="col-sm-2 ellipsis hidden-xs">
@@ -19,6 +19,9 @@
 			<!-- <div class="col-sm-1 ellipsis hidden-xs">
 				{{ currency }}
 			</div> -->
+			<div class="col-sm-1 ellipsis hidden-xs">
+				{{ __("Extra columns") }}
+			</div>
 		</div>
 		<!-- <div class="col-xs-3 col-sm-1">
 			<div class="btn-group">

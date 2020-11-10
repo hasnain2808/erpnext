@@ -30,19 +30,70 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 
 			{
 				fieldtype: "Link",
-				label: __("trans"),
-				options : "Bank Transaction",
-				fieldname: "payment_proposals",
+				fieldname: "company",
+				label: __("Company"),
+				options: "Company",
+				change: () => {
+					this.upload_statement_dialog.get_field("import_bank_transactions").df.hidden=0;
+					this.upload_statement_dialog.get_field("import_bank_transactions").refresh();
+					// console.log(t)
+					// if (!this.upload_statement_dialog.get_value("company"))
+					// $("[data-fieldname=upload_statement_dialog]").hide()
+					// 		else
+					// 		$("[data-fieldname=upload_statement_dialog]").show()
+
+				}
+			},
+
+			{
+				fieldtype: "Data",
+				fieldname: "bank_account",
+				label: __("Bank Account"),
+				options: "Bank Account",
+				get_query: () => {
+					return {
+						filters: {
+							company: [
+								"in",
+								[this.upload_statement_dialog.get_value("company") || ""],
+							],
+						},
+					};
+				},
+
+			},
+			{
+				fieldtype: "Attach",
+				fieldname: "import_bank_transactions",
+				label: __("Import Bank Transactions"),
+				hidden:1,
+				change: () => {
+					console.log(this.upload_statement_dialog.get_value("import_bank_transactions"));
+					this.show_preview(this.upload_statement_dialog.get_value("import_bank_transactions"))
+				}
+				// get_query: () => {
+				// 	return {
+				// 		filters: {
+				// 			company: [
+				// 				"in",
+				// 				[this.upload_statement_dialog.get_value("company") || ""],
+				// 			],
+				// 		},
+				// 	};
+				// }
 			},
 
 		]
 		this.upload_statement_dialog = new frappe.ui.Dialog({
-			title: __("Choose a corresponding payment"),
+			title: __("Upload Bank statements"),
 			fields: fields,
 			size: "large",
 		});
 	}
 
+	show_preview(file_name){
+
+	}
 
 	make_form() {
 		const me = this;
@@ -497,7 +548,54 @@ erpnext.accounts.ReconciliationRow = class ReconciliationRow {
 			});
 	}
 
+	get_payment_fields(){
+		return 			[			{
+			fieldname: "description",
+			fieldtype: "Small Text",
+			read_only: 1
+		},{
+			fieldname: "party_type",
+			fieldtype: "Link",
+			label: "Party Type",
+			options: "DocType",
+		},
 
+		{
+			fieldname: "party",
+			fieldtype: "Dynamic Link",
+			label: "Party",
+			options: "party_type"
+		},
+		{
+			fieldname: "reference_number",
+			fieldtype: "Data",
+			label: "Reference Number",
+		},]
+	}
+
+	make_new_voucher_dialog(data) {
+		const me = this;
+		let fields = me.get_payment_fields();
+		fields.unshift({
+			label: __('Voucher Type'),
+			fieldname: 'voucher_type',
+			fieldtype: 'Select',
+			options: "Payment Entry\nExpense Claim",
+		})
+		me.new_voucher_dialog = new frappe.ui.Dialog({
+			title: __("Create New Voucher"),
+			fields: fields,
+		});
+	}
+
+	make_update_transaction_dialog(data) {
+		const me = this;
+		let fields = me.get_payment_fields()
+		me.update_transaction_dialog = new frappe.ui.Dialog({
+			title: __("Create New Voucher"),
+			fields: fields,
+		});
+	}
 
 	make_dialog(data) {
 		const me = this;
@@ -628,19 +726,19 @@ erpnext.accounts.ReconciliationRow = class ReconciliationRow {
 				fieldname: "payment_details",
 			},
 
-			{
-				fieldtype: "Section Break",
-				fieldname: "section_break_3",
-				label: "Description",
-				"collapsible": 1,
+			// {
+			// 	fieldtype: "Section Break",
+			// 	fieldname: "section_break_3",
+			// 	label: "Description",
+			// 	"collapsible": 1,
 
-			},
+			// },
 
-			{
-				fieldname: "description",
-				fieldtype: "Small Text",
-				read_only: 1
-			},
+			// {
+			// 	fieldname: "description",
+			// 	fieldtype: "Small Text",
+			// 	read_only: 1
+			// },
 			{
 				fieldtype: "Section Break",
 				fieldname: "section_break_4",
@@ -648,55 +746,53 @@ erpnext.accounts.ReconciliationRow = class ReconciliationRow {
 				"collapsible": 1,
 
 			},
-			{
-				fieldname: "party_type",
-				fieldtype: "Link",
-				label: "Party Type",
-				options: "DocType",
-			},
+			// {
+			// 	fieldname: "party_type",
+			// 	fieldtype: "Link",
+			// 	label: "Party Type",
+			// 	options: "DocType",
+			// },
+
+			// {
+			// 	fieldname: "party",
+			// 	fieldtype: "Dynamic Link",
+			// 	label: "Party",
+			// 	options: "party_type"
+			// },
+			// {
+			// 	fieldname: "reference_number",
+			// 	fieldtype: "Data",
+			// 	label: "Reference Number",
+			// },
 
 			{
-				fieldname: "party",
-				fieldtype: "Dynamic Link",
-				label: "Party",
-				options: "party_type"
-			},
-			{
-				fieldname: "reference_number",
-				fieldtype: "Data",
-				label: "Reference Number",
-			},
+				fieldname: "update_transaction_button",
+				fieldtype: "Button",
+				label: "Update Transaction",
+				click: () => {
+					me.make_update_transaction_dialog()
+					me.update_transaction_dialog.show()
+				}			},
 			{
 				fieldtype: "Column Break",
 				fieldname: "column_break_2",
 			},
 			{
-				fieldname: "update_transaction_button",
+				fieldname: "create_new_vouchers",
 				fieldtype: "Button",
-				label: "Update Transaction",
-				// options: "Butto",
+				label: "Create New Vouchers",
+				click: () => {
+					me.make_new_voucher_dialog()
+					me.new_voucher_dialog.show()
+				}
 			},
-			{
-				fieldname: "create_new_payment",
-				fieldtype: "Button",
-				label: "Create New Payment",
-				click: () => {frappe.confirm('Create new Payment Entry?',
-				() => {
-					// action to perform if Yes is selected
-				}, () => {
-					// action to perform if No is selected
-				})}
-			},
-			{
-				fieldname: "create_new_expense",
-				fieldtype: "Button",
-				label: "Create New Expense",
-				click: () => {frappe.confirm('Create new Expense?',
-				() => {
-					// action to perform if Yes is selected
-				}, () => {
-					// action to perform if No is selected
-				})}			},
+			// {
+			// 	fieldname: "create_new_expense",
+			// 	fieldtype: "Button",
+			// 	label: "Create New Expense",
+			// 	click: () => {
+
+			// 	}			},
 		];
 
 		me.dialog = new frappe.ui.Dialog({
