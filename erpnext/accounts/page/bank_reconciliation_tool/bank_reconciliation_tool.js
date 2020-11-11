@@ -109,12 +109,26 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 			   },
 
 		]
+
 		this.upload_statement_dialog = new frappe.ui.Dialog({
 			title: __("Upload Bank statements"),
 			fields: fields,
 			size: "large",
 			primary_action: values => {
-				dialog.hide();
+					frappe
+						.call({
+							method: 'erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.start_import',
+							args: {
+								data_import:  this.upload_statement_dialog.get_value("data_import_id")
+							},
+							// btn: frm.page.btn_primary
+						})
+						// .then(r => {
+						// 	if (r.message === true) {
+						// 		frm.disable_save();
+						// 	}
+						// });
+						this.upload_statement_dialog.hide();
 			}
 		});
 	}

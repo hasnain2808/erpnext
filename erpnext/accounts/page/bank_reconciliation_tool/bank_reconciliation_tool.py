@@ -68,3 +68,8 @@ def get_importer_preview(import_file_path, data_import=None, template_options=No
 
 	# return [preview, importer.data_import.name]
 	return {"preview":preview, "import_name": importer.data_import.name}
+
+
+@frappe.whitelist()
+def start_import(data_import):
+	return frappe.get_doc("Data Import", data_import).start_import()
