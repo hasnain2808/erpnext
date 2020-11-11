@@ -14,6 +14,7 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 		});
 		this.upload_statement_button = this.page.set_secondary_action(__("Upload a Statement"), ()=>{
 			this.upload_statement_dialog.show()
+			this.upload_statement_dialog.get_primary_btn().hide()
 		})
 
 		this.parent = wrapper;
@@ -33,20 +34,20 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 				fieldname: "company",
 				label: __("Company"),
 				options: "Company",
-				change: () => {
-					this.upload_statement_dialog.get_field("import_bank_transactions").df.hidden=0;
-					this.upload_statement_dialog.get_field("import_bank_transactions").refresh();
-					// console.log(t)
-					// if (!this.upload_statement_dialog.get_value("company"))
-					// $("[data-fieldname=upload_statement_dialog]").hide()
-					// 		else
-					// 		$("[data-fieldname=upload_statement_dialog]").show()
+				// change: () => {
+				// 	this.upload_statement_dialog.get_field("import_bank_transactions").df.hidden=0;
+				// 	this.upload_statement_dialog.get_field("import_bank_transactions").refresh();
+				// 	// console.log(t)
+				// 	// if (!this.upload_statement_dialog.get_value("company"))
+				// 	// $("[data-fieldname=upload_statement_dialog]").hide()
+				// 	// 		else
+				// 	// 		$("[data-fieldname=upload_statement_dialog]").show()
 
-				}
+				// }
 			},
 
 			{
-				fieldtype: "Data",
+				fieldtype: "Link",
 				fieldname: "bank_account",
 				label: __("Bank Account"),
 				options: "Bank Account",
@@ -63,10 +64,12 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 
 			},
 			{
+				fieldtype: "Column Break",
+			},
+			{
 				fieldtype: "Attach",
 				fieldname: "import_bank_transactions",
 				label: __("Import Bank Transactions"),
-				hidden:1,
 				change: () => {
 					this.show_preview()
 				}
@@ -82,16 +85,33 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 				// }
 			},
 			{
-				fieldname: "import_log",
-				fieldtype: "Code",
-				label: "Import Log",
-				options: "JSON"
+				fieldname: "import_warnings_section",
+				fieldtype: "Section Break",
+				label: "Import File Errors and Warnings"
+			   },
+			   {
+				fieldname: "import_warnings",
+				fieldtype: "HTML",
+				label: "Import Warnings"
+			   },
+			   {
+				fieldname: "section_import_preview",
+				fieldtype: "Section Break",
+				label: "Preview"
 			   },
 			{
 				fieldname: "import_preview",
 				fieldtype: "HTML",
 				label: "Import Preview"
 			   },
+			   {
+				fieldname: "template_warnings",
+				fieldtype: "Code",
+				hidden: 1,
+				label: "Template Warnings",
+				options: "JSON"
+			   },
+
 			//    {
 			// 	fieldname: "template_options",
 			// 	fieldtype: "Code",
@@ -170,6 +190,7 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 				let preview_data = r.message["preview"];
 				me.upload_statement_dialog.set_value('data_import_id', r.message["import_name"]);
 				me.show_import_preview(me.upload_statement_dialog, preview_data)
+				me.show_import_warnings(me.upload_statement_dialog, preview_data)
 			});
 	}
 
@@ -177,6 +198,7 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 		const me = this;
 		let import_log = JSON.parse(frm.get_value('import_log') || '[]');
 ;
+		me.upload_statement_dialog.get_primary_btn().show()
 
 		if (
 			frm.import_preview &&
@@ -210,6 +232,79 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 				}
 			});
 		});
+	}
+	show_import_warnings(frm, preview_data) {
+		let columns = preview_data.columns;
+		let warnings = JSON.parse(frm.get_value('template_warnings') || '[]');
+		warnings = warnings.concat(preview_data.warnings || []);
+
+		// frm.toggle_display('import_warnings_section', warnings.length > 0);
+		// if (warnings.length>0){
+		// 	frm.get_field("import_warnings_section").$wrapper.hide()
+		// }
+		if (warnings.length === 0) {
+			frm.get_field('import_warnings').$wrapper.html('');
+			return;
+		}
+
+		// group warnings by row
+		let warnings_by_row = {};
+		let other_warnings = [];
+		for (let warning of warnings) {
+			if (warning.row) {
+				warnings_by_row[warning.row] = warnings_by_row[warning.row] || [];
+				warnings_by_row[warning.row].push(warning);
+			} else {
+				other_warnings.push(warning);
+			}
+		}
+
+		let html = '';
+		html += Object.keys(warnings_by_row)
+			.map(row_number => {
+				let message = warnings_by_row[row_number]
+					.map(w => {
+						if (w.field) {
+							let label =
+								w.field.label +
+								(w.field.parent !== frm.doc.reference_doctype
+									? ` (${w.field.parent})`
+									: '');
+							return `<li>${label}: ${w.message}</li>`;
+						}
+						return `<li>${w.message}</li>`;
+					})
+					.join('');
+				return `
+				<div class="warning" data-row="${row_number}">
+					<h5 class="text-uppercase">${__('Row {0}', [row_number])}</h5>
+					<div class="body"><ul>${message}</ul></div>
+				</div>
+			`;
+			})
+			.join('');
+
+		html += other_warnings
+			.map(warning => {
+				let header = '';
+				if (warning.col) {
+					let column_number = `<span class="text-uppercase">${__('Column {0}', [warning.col])}</span>`;
+					let column_header = columns[warning.col].header_title;
+					header = `${column_number} (${column_header})`;
+				}
+				return `
+					<div class="warning" data-col="${warning.col}">
+						<h5>${header}</h5>
+						<div class="body">${warning.message}</div>
+					</div>
+				`;
+			})
+			.join('');
+		frm.get_field('import_warnings').$wrapper.html(`
+			<div class="row">
+				<div class="col-sm-10 warnings">${html}</div>
+			</div>
+		`);
 	}
 
 	make_form() {
