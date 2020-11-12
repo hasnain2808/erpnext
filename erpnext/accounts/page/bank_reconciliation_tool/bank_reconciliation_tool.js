@@ -272,6 +272,7 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 				.build_summary_item(summary)
 				.appendTo(this.$summary);
 		});
+		this.$summary.css('border-bottom','0px')
 		this.$summary.show();
 	}
 
