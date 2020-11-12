@@ -5,10 +5,10 @@ frappe.require('/assets/js/data_import_tools.min.js', () => {
 	erpnext.accounts.ImportPreviewDialog = class ImportPreviewDialog extends frappe.data_import.ImportPreview {
 		constructor(opts) {
 			super(opts);
-			// this.show();
 		}
 
 		add_actions() {
+
 			let actions = [
 				{
 					label: __('Map Columns'),
@@ -38,7 +38,6 @@ frappe.require('/assets/js/data_import_tools.min.js', () => {
 	
 			this.wrapper.find('.table-actions').html(html);
 		}
-
 
 		show_column_mapper() {
 			let column_picker_fields = this.get_columns_for_picker(this.doctype);

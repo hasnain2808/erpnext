@@ -26,58 +26,15 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 					me.upload_statement_dialog.refresh_dependency()
 				}
 			},
-
-			{
-				fieldtype: "Link",
-				fieldname: "bank_account",
-				label: __("Bank Account"),
-				options: "Bank Account",
-				depends_on: "eval: doc.company == 'moha' ",
-				get_query: () => {
-					return {
-						filters: {
-							company: [
-								"in",
-								[this.upload_statement_dialog.get_value("company") || ""],
-							],
-						},
-					};
-				},
-				change: ()=>{
-					me.upload_statement_dialog.get_field("bank_account").validate_link_and_fetch()
-
-					// me.upload_statement_dialog.get_field("bank").refresh()
-				}
-
-			},
-			{
-				fieldtype: "Link",
-				fieldname: "bank",
-				label: __("Bank"),
-				options: "Bank",
-				depends_on: "eval: doc.company == 'moha' ",
-				fetch_from:"doc.bank_account.bank",
-				// get_query: () => {
-				// 	return {
-				// 		filters: {
-				// 			company: [
-				// 				"in",
-				// 				[this.upload_statement_dialog.get_value("company") || ""],
-				// 			],
-				// 		},
-				// 	};
-				// },
-
-			},
-			{
-				fieldtype: "Column Break",
-			},
 			{
 				fieldtype: "Attach",
 				fieldname: "import_bank_transactions",
+				depends_on: "eval: doc.bank_account",
 				label: __("Import Bank Transactions"),
 				change: () => {
-					this.show_preview()
+					this.show_preview();
+					me.upload_statement_dialog.refresh_dependency()
+
 				}
 				// get_query: () => {
 				// 	return {
@@ -91,19 +48,50 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 				// }
 			},
 			{
-				fieldname: "import_warnings_section",
-				fieldtype: "Section Break",
-				label: "Import File Errors and Warnings"
-			   },
-			   {
-				fieldname: "import_warnings",
-				fieldtype: "HTML",
-				label: "Import Warnings"
-			   },
+				fieldtype: "Column Break",
+			},
+			{
+				fieldtype: "Link",
+				fieldname: "bank_account",
+				label: __("Bank Account"),
+				options: "Bank Account",
+				depends_on: "eval: doc.company",
+				get_query: () => {
+					return {
+						filters: {
+							company: [
+								"in",
+								[this.upload_statement_dialog.get_value("company") || ""],
+							],
+						},
+					};
+				},
+				change: ()=>{
+					// me.upload_statement_dialog.get_field("bank_account").validate_link_and_fetch()
+					me.upload_statement_dialog.refresh_dependency()
+
+					// me.upload_statement_dialog.get_field("bank").refresh()
+				}
+
+			},
+			{
+				fieldtype: "Link",
+				fieldname: "bank",
+				label: __("Bank"),
+				options: "Bank",
+				read_only: 1,
+				depends_on: "eval: doc.bank_account",
+				fetch_from:"doc.bank_account.bank",
+			},
+
+
+
 			   {
 				fieldname: "section_import_preview",
 				fieldtype: "Section Break",
-				label: "Preview"
+				label: "Preview",
+				depends_on: "eval: doc.import_bank_transactions",
+
 			   },
 			{
 				fieldname: "import_preview",
@@ -133,11 +121,22 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 				label: "Data Import ID",
 				read_only: 1
 			   },
+			   {
+				fieldname: "import_warnings_section",
+				fieldtype: "Section Break",
+				label: "Import File Errors and Warnings",
+				depends_on: "eval: doc.import_bank_transactions",
+			   },
+			   {
+				fieldname: "import_warnings",
+				fieldtype: "HTML",
+				label: "Import Warnings"
+			   },
 
 		]
 
 		this.upload_statement_dialog = new frappe.ui.Dialog({
-			title: __("Upload Bank statements"),
+			title: __("Upload Bank Statements"),
 			fields: fields,
 			size: "large",
 			primary_action: values => {
