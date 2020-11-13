@@ -42,6 +42,10 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 					fieldname: "company",
 					label: __("Company"),
 					options: "Company",
+					change: () => {
+						this.make_reconciliation_tool()
+
+					},
 				},
 				{
 					fieldtype: "Link",
@@ -59,9 +63,12 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 						};
 					},
 					change: () => {
+						me.form.refresh_dependency()
+
 						me.bank_account =
 						me.form.get_value("bank_account") || "";
 						this.get_account_opening_balance()
+						this.make_reconciliation_tool()
 					},
 				},
 
@@ -72,13 +79,17 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 					fieldname: "bank_statement_from_date",
 					label: __("Bank Statement From Date"),
 					fieldtype: "Date",
+					depends_on: "eval: doc.bank_account",
 					change: () => {
+						me.form.refresh_dependency()
 						if (me.bank_statement_from_date != me.form.get_value("bank_statement_from_date")) {
 							me.bank_statement_from_date =
 								me.form.get_value(
 									"bank_statement_from_date"
 								) || "";
 								this.get_account_opening_balance()
+								this.make_reconciliation_tool()
+
 							}
 					},
 				},
@@ -86,12 +97,16 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 					fieldname: "bank_statement_to_date",
 					label: __("Bank Statement To Date"),
 					fieldtype: "Date",
+					depends_on: "eval: doc.bank_statement_from_date",
 					change: () => {
+						me.form.refresh_dependency()
 						if (me.bank_statement_to_date != me.form.get_value("bank_statement_to_date")) {
 							me.bank_statement_to_date =
 								me.form.get_value(
 									"bank_statement_to_date"
 								) || "";
+							this.make_reconciliation_tool()
+
 						}
 					},
 				},
@@ -103,6 +118,7 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 					label: __("Account Opening Balance"),
 					fieldtype: "Currency",
 					options: "Currency",
+					depends_on: "eval: doc.bank_statement_from_date",
 					read_only: 1,
 				},
 				{
@@ -110,6 +126,8 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 					label: __("Bank Statement Closing Balance"),
 					fieldtype: "Currency",
 					options: "Currency",
+					depends_on: "eval: doc.bank_statement_to_date",
+
 					change: () => {
 						if (me.bank_statement_closing_balance != me.form.get_value("bank_statement_closing_balance")) {
 
@@ -126,6 +144,8 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 					fieldtype: "Section Break",
 					fieldname: "section_break_1",
 					label: __("Reconcile"),
+					depends_on: "eval: doc.bank_statement_closing_balance",
+
 				},
 				{
 					fieldname: "transactions",
@@ -144,63 +164,37 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 		me.form.make();
 	}
 
-	get_selected_statement_data(statement) {
-		const me = this;
-		if (statement) {
-			frappe.call({
-				method: "frappe.client.get",
-				args: {
-					doctype: "Bank Statement",
-					name: statement,
-				},
-				callback(r) {
-					if (r.message) {
-						let selected_bank_statement = r.message;
-						me.bank_statement_from_date = selected_bank_statement.from_date;
-						me.bank_statement_to_date = selected_bank_statement.to_date;
-						me.bank_statement_opening_balance =
-							selected_bank_statement.opening_balance;
-						me.bank_statement_closing_balance =
-							selected_bank_statement.closing_balance;
-
-						me.form.set_value(
-							"bank_statement_from_date",
-							me.bank_statement_from_date
-						);
-						me.form.set_value(
-							"bank_statement_to_date",
-							me.bank_statement_to_date
-						);
-						me.form.set_value(
-							"bank_statement_opening_balance",
-							me.bank_statement_opening_balance
-						);
-						me.form.set_value(
-							"bank_statement_closing_balance",
-							me.bank_statement_closing_balance
-						);
-					}
-				},
-			});
-		}
-	}
-
 	make_reconciliation_tool() {
 		const me = this;
 		$("#transactions").empty();
 		$("#cards").empty();
 		// this.get_bank_balance()
-		me.get_account_closing_balance().then( () => {
-			me.render_chart();
-			me.render_header();
-			me.render();
-			$("#cards").scrollTop()
-		});
+		console.log(this.bank_account)
+		console.log(this.bank_statement_from_date)
+		if(
+			this.bank_account && this.bank_statement_from_date
+		){
+			me.get_account_closing_balance().then( () => {
+				if(
+					this.bank_account
+					&& this.bank_statement_from_date
+					&& this.bank_statement_to_date
+					&& this.bank_statement_closing_balance
+				){
+					me.render_chart();
+					me.render_header();
+					me.render();
+					$("#cards").scrollTop();
+				}
+			});
+		}
 	}
 
 	get_account_opening_balance() {
 		const me = this
-		if (this.bank_account && this.bank_statement_from_date){
+		if(
+			this.bank_account && this.bank_statement_from_date
+		){
 			frappe.call({
 				method:
 					"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.get_account_balance",
