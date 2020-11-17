@@ -172,7 +172,7 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 		console.log(this.bank_account)
 		console.log(this.bank_statement_from_date)
 		if(
-			this.bank_account && this.bank_statement_from_date
+			this.bank_account && this.bank_statement_to_date
 		){
 			me.get_account_closing_balance().then( () => {
 				if(
@@ -216,7 +216,7 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 
 	get_account_closing_balance() {
 		const me = this
-		if (this.bank_account && this.bank_statement_from_date){
+		if (this.bank_account && this.bank_statement_to_date){
 			return frappe.call({
 				method:
 					"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.get_account_balance",

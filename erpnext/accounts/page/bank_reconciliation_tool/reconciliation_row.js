@@ -352,39 +352,59 @@ erpnext.accounts.ReconciliationRow = class ReconciliationRow {
 				fieldname: "payment_details",
 			},
 
-			// {
-			// 	fieldtype: "Section Break",
-			// 	fieldname: "section_break_3",
-			// 	label: "Description",
-			// 	"collapsible": 1,
+			{
+				fieldtype: "Section Break",
+				fieldname: "description_section",
+				label: "Description",
+				"collapsible": 1,
 
-			// },
+			},
 
-			// {
-			// 	fieldname: "description",
-			// 	fieldtype: "Small Text",
-			// 	read_only: 1
-			// },
+			{
+				fieldname: "description",
+				fieldtype: "Small Text",
+				read_only: 1
+			},
 			{
 				fieldtype: "Section Break",
 				fieldname: "section_break_4",
 				label: "Update Bank Transaction Create Vouchers",
-				"collapsible": 1,
+				collapsible: 1,
 
 			},
-			// {
-			// 	fieldname: "party_type",
-			// 	fieldtype: "Link",
-			// 	label: "Party Type",
-			// 	options: "DocType",
-			// },
-
-			// {
-			// 	fieldname: "party",
-			// 	fieldtype: "Dynamic Link",
-			// 	label: "Party",
-			// 	options: "party_type"
-			// },
+			{
+				label: __('Action'),
+				fieldname: 'action',
+				fieldtype: 'Select',
+				options: 'Update Transaction\\nCreate Payment Entry\\nCreate Expense Claim',
+				default: 'Update Transaction'
+			},
+			{
+			fieldname: "reference_number",
+			fieldtype: "Data",
+			label: "Reference Number"
+			},
+			{
+			fieldname: "transaction_id",
+			fieldtype: "Data",
+			label: "Transaction ID",
+			},
+			{
+			fieldname: "column_break_7",
+			fieldtype: "Column Break"
+			},
+			{
+				fieldname: "party_type",
+				fieldtype: "Link",
+				label: "Party Type",
+				options: "DocType",
+			},
+			{
+				fieldname: "party",
+				fieldtype: "Dynamic Link",
+				label: "Party",
+				options: "party_type"
+			},
 			// {
 			// 	fieldname: "reference_number",
 			// 	fieldtype: "Data",
@@ -395,18 +415,31 @@ erpnext.accounts.ReconciliationRow = class ReconciliationRow {
 				fieldname: "update_transaction_button",
 				fieldtype: "Button",
 				label: "Update Transaction",
+				depends_on: "eval:doc.action=='Update Transaction'",
+				primary:1,
 				click: () => {
 					me.make_update_transaction_dialog()
 					me.update_transaction_dialog.show()
 				}			},
+
 			{
-				fieldtype: "Column Break",
-				fieldname: "column_break_2",
-			},
-			{
-				fieldname: "create_new_vouchers",
+				fieldname: "create_new_payment",
 				fieldtype: "Button",
-				label: "Create New Vouchers",
+				label: "Create New Payment",
+				primary:1,
+				depends_on: "eval:doc.action=='Create Payment Entry'",
+				click: () => {
+					me.make_new_voucher_dialog()
+					me.new_voucher_dialog.show()
+				}
+			},
+
+			{
+				fieldname: "create_new_expense",
+				fieldtype: "Button",
+				label: "Create New Expense Claim",
+				depends_on: "eval:doc.action=='Create Expense Claim'",
+				primary:1,
 				click: () => {
 					me.make_new_voucher_dialog()
 					me.new_voucher_dialog.show()
@@ -430,6 +463,9 @@ erpnext.accounts.ReconciliationRow = class ReconciliationRow {
 		const proposals_wrapper =
 			me.dialog.fields_dict.payment_proposals.$wrapper;
 		if (data && data.length > 0) {
+			proposals_wrapper.show()
+			me.dialog.get_field('section_break_1').df.hidden = 0
+			me.dialog.get_field('section_break_1').refresh()
 			proposals_wrapper.append(
 				frappe.render_template("linked_payment_header")
 			);
@@ -439,12 +475,15 @@ erpnext.accounts.ReconciliationRow = class ReconciliationRow {
 				);
 			});
 		} else {
-			const empty_data_msg = __(
-				"ERPNext could not find any matching payment entry"
-			);
-			proposals_wrapper.append(
-				`<div class="text-center"><h5 class="text-muted">${empty_data_msg}</h5></div>`
-			);
+			// const empty_data_msg = __(
+			// 	"ERPNext could not find any matching payment entry"
+			// );
+			// proposals_wrapper.append(
+			// 	`<div class="text-center"><h5 class="text-muted">${empty_data_msg}</h5></div>`
+			// );
+			// proposals_wrapper.hide()
+			me.dialog.get_field('section_break_1').df.hidden = 1
+			me.dialog.get_field('section_break_1').refresh()
 		}
 
 		$(me.dialog.body).on("click", ".reconciliation-btn", (e) => {
@@ -468,11 +507,15 @@ erpnext.accounts.ReconciliationRow = class ReconciliationRow {
 		});
 
 		me.dialog.show();
+		me.dialog.get_field('section_break_3').df.hidden = 1
+		me.dialog.get_field('section_break_3').refresh()
 	}
 
 	display_payment_details(event) {
 		const me = this;
 		if (event.value) {
+			me.dialog.get_field('section_break_3').df.hidden = 0
+			me.dialog.get_field('section_break_3').refresh()
 			let dt = me.dialog.fields_dict.payment_doctype.value;
 			me.dialog.fields_dict["payment_details"].$wrapper.empty();
 			frappe.db.get_doc(dt, event.value).then((doc) => {

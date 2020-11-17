@@ -8,6 +8,8 @@ from frappe.model.document import Document
 def get_bank_transactions(bank_account, from_date = None, to_date = None):
 	filters = []
 	filters.append(['bank_account' ,'=', bank_account])
+	filters.append(['docstatus' ,'=', 1])
+	filters.append(['unallocated_amount' ,'>', 0])
 	if to_date:
 		filters.append(['date' ,'<=', to_date])
 	if from_date:
