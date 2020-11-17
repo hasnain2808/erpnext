@@ -151,11 +151,13 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 							},
 							// btn: frm.page.btn_primary
 						})
-						// .then(r => {
-						// 	if (r.message === true) {
-						// 		frm.disable_save();
-						// 	}
-						// });
+						.then(r => {
+							if (r.message === true) {
+								frappe.show_alert({
+									message:__('The Trasactions will be imported in background'),
+									indicator:'green'
+								}, 5);							}
+						});
 						this.upload_statement_dialog.hide();
 						delete this.upload_statement_dialog;
 						this.make_upload_statement_dialog();
