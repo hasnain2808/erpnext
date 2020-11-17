@@ -142,9 +142,12 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 			primary_action: values => {
 					frappe
 						.call({
-							method: 'erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.start_import',
+							method: 'erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.form_start_import',
 							args: {
-								data_import:  this.upload_statement_dialog.get_value("data_import_id")
+								// data_import:  this.upload_statement_dialog.get_value("data_import_id")
+								import_file_path: me.upload_statement_dialog.get_value("import_bank_transactions"),
+								data_import: me.upload_statement_dialog.get_value("data_import_id") ,
+								template_options: me.template_options
 							},
 							// btn: frm.page.btn_primary
 						})
