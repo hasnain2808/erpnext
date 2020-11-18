@@ -69,7 +69,25 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 				change: ()=>{
 					// me.upload_statement_dialog.get_field("bank_account").validate_link_and_fetch()
 					me.upload_statement_dialog.refresh_dependency()
+					frappe.call({
+						async: false,
+						method: "frappe.client.get_value",
+						args: {
+							"doctype": "Bank Account",
+							"filters": {
+								'name': this.upload_statement_dialog.get_value("bank_account") // where Clause 
+							},
+							"fieldname": ['bank'] // fieldname to be fetched
+						},
+						callback: function (r) {
+							if (r.message != undefined) {
+							   console.log(r.message)
+							   me.upload_statement_dialog.set_value('bank', r.message["bank"]);
 
+							}
+						}
+				
+					})
 					// me.upload_statement_dialog.get_field("bank").refresh()
 				}
 
@@ -140,6 +158,8 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 			fields: fields,
 			size: "large",
 			primary_action: values => {
+				if(me.upload_statement_dialog.get_value("import_bank_transactions")){
+					console.log(me.upload_statement_dialog.get_value("bank_account"))
 					frappe
 						.call({
 							method: 'erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.form_start_import',
@@ -147,7 +167,8 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 								// data_import:  this.upload_statement_dialog.get_value("data_import_id")
 								import_file_path: me.upload_statement_dialog.get_value("import_bank_transactions"),
 								data_import: me.upload_statement_dialog.get_value("data_import_id") ,
-								template_options: me.template_options
+								template_options: me.template_options,
+								bank_account: me.upload_statement_dialog.get_value("bank_account")
 							},
 							// btn: frm.page.btn_primary
 						})
@@ -161,6 +182,7 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 						this.upload_statement_dialog.hide();
 						delete this.upload_statement_dialog;
 						this.make_upload_statement_dialog();
+				}
 			}
 		});
 	}

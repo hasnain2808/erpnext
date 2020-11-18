@@ -232,7 +232,6 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 		}
 	}
 
-
 	render_chart() {
 		// $(".report-summary").remove();
 		const me = this;
