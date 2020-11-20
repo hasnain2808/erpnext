@@ -75,9 +75,9 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 						args: {
 							"doctype": "Bank Account",
 							"filters": {
-								'name': this.upload_statement_dialog.get_value("bank_account") // where Clause 
+								'name': this.upload_statement_dialog.get_value("bank_account")
 							},
-							"fieldname": ['bank'] // fieldname to be fetched
+							"fieldname": ['bank'] 
 						},
 						callback: function (r) {
 							if (r.message != undefined) {

@@ -230,8 +230,23 @@ erpnext.accounts.ReconciliationRow = class ReconciliationRow {
 		const fields = [
 			{
 				fieldtype: "Section Break",
+				fieldname: "section_break_4",
+				label: "Action"
+			},
+			{
+				label: __('Action'),
+				fieldname: 'action',
+				fieldtype: 'Select',
+				options: 'Match Payment Entry\\nAdd Payment Entry\\nUpdate Bank Transaction',
+				default: 'Reconcile'
+			},
+
+
+			{
+				fieldtype: "Section Break",
 				fieldname: "section_break_1",
 				label: __("Automatic Reconciliation"),
+				depends_on: 'eval: doc.action=="Match Payment Entry"'
 			},
 			{
 				fieldtype: "HTML",
@@ -241,6 +256,8 @@ erpnext.accounts.ReconciliationRow = class ReconciliationRow {
 				fieldtype: "Section Break",
 				fieldname: "section_break_2",
 				label: __("Search for a payment"),
+				depends_on: 'eval: doc.action=="Match Payment Entry"'
+
 			},
 			{
 				fieldtype: "Link",
@@ -346,6 +363,8 @@ erpnext.accounts.ReconciliationRow = class ReconciliationRow {
 			{
 				fieldtype: "Section Break",
 				fieldname: "section_break_3",
+				depends_on: 'eval: doc.action=="Match Payment Entry"'
+
 			},
 			{
 				fieldtype: "HTML",
@@ -365,20 +384,7 @@ erpnext.accounts.ReconciliationRow = class ReconciliationRow {
 				fieldtype: "Small Text",
 				read_only: 1
 			},
-			{
-				fieldtype: "Section Break",
-				fieldname: "section_break_4",
-				label: "Update Bank Transaction Create Vouchers",
-				collapsible: 1,
 
-			},
-			{
-				label: __('Action'),
-				fieldname: 'action',
-				fieldtype: 'Select',
-				options: 'Update Transaction\\nCreate Payment Entry\\nCreate Expense Claim',
-				default: 'Update Transaction'
-			},
 			{
 			fieldname: "reference_number",
 			fieldtype: "Data",
