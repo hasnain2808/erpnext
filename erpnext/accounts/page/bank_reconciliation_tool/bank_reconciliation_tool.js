@@ -613,17 +613,39 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 				fieldname: "reference_number",
 				fieldtype: "Data",
 				label: "Reference Number",
-				
-				default: me.data.reference_number || ''
+				default: me.data.reference_number || '',
+				mandatory_depends_on: "eval:doc.action=='Add Payment Entry'",
 			},
 
 			{
 				fieldname: "transaction_id",
 				fieldtype: "Data",
 				label: "Transaction ID",
-				
 				default: me.data.transaction_id || ''
 			},
+			{
+				default: "Today",
+				fieldname: "posting_date",
+				fieldtype: "Date",
+				label: "Posting Date",
+				reqd: 1,
+				depends_on: "eval:doc.action=='Add Payment Entry'",
+
+			},
+			{
+				fieldname: "reference_date",
+				fieldtype: "Date",
+				label: "Cheque/Reference Date",
+				depends_on: "eval:doc.action=='Add Payment Entry'",
+				reqd: 1,
+			   },
+			{
+				fieldname: "mode_of_payment",
+				fieldtype: "Link",
+				label: "Mode of Payment",
+				options: "Mode of Payment",
+				depends_on: "eval:doc.action=='Add Payment Entry'",
+			   },
 			{
 				fieldname: "column_break_7",
 				fieldtype: "Column Break",
@@ -634,20 +656,32 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 				fieldtype: "Link",
 				label: "Party Type",
 				options: "DocType",
-				default:  me.data.party_type || ( me.data.credit ? "Customer" : "Supplier")// me.data.party_type || ''
+				default:  me.data.party_type || ( me.data.credit ? "Customer" : "Supplier"),
+				mandatory_depends_on: "eval:doc.action=='Add Payment Entry'",
 			},
 			{
 				fieldname: "party",
 				fieldtype: "Dynamic Link",
 				label: "Party",
 				options: "party_type",
-				default: me.data.party || ''
+				default: me.data.party || '',
+				mandatory_depends_on: "eval:doc.action=='Add Payment Entry'",
 			},
-			// {
-			// 	fieldname: "reference_number",
-			// 	fieldtype: "Data",
-			// 	label: "Reference Number",
-			// },
+			{
+				fieldname: "project",
+				fieldtype: "Link",
+				label: "Project",
+				options: "Project",
+				depends_on: "eval:doc.action=='Add Payment Entry'",
+
+			   },
+			{
+				fieldname: "cost_center",
+				fieldtype: "Link",
+				label: "Cost Center",
+				options: "Cost Center",
+				depends_on: "eval:doc.action=='Add Payment Entry'",
+			},
 
 			{
 				fieldname: "update_transaction_button",
@@ -702,8 +736,37 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 				primary: 1,
 				depends_on: "eval:doc.action=='Add Payment Entry'",
 				click: () => {
-				// 	me.make_new_voucher_dialog();
-				// 	me.new_voucher_dialog.show();
+				console.log(me.data.name)
+				console.log(me.dialog.get_value("transaction_id"),)
+				console.log(me.dialog.get_value("reference_number"),)
+				console.log(me.dialog.get_value("reference_date"),)
+				console.log(me.dialog.get_value("party_type"),)
+				console.log(me.dialog.get_value("party"),)
+				console.log(me.dialog.get_value("posting_date"),)
+				console.log(me.dialog.get_value("mode_of_payment"),)
+				console.log(me.dialog.get_value("project"),)
+				console.log(me.dialog.get_value("cost_center"),)
+
+					frappe.call({
+						method:
+							"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.create_payment_entry_bts",
+						args: {
+							bank_transaction : me.data.name,
+							transaction_id : me.dialog.get_value("transaction_id"),
+							reference_number : me.dialog.get_value("reference_number"),
+							reference_date : me.dialog.get_value("reference_date"),
+							party_type : me.dialog.get_value("party_type"),
+							party : me.dialog.get_value("party"),
+							posting_date : me.dialog.get_value("posting_date"),
+							mode_of_payment : me.dialog.get_value("mode_of_payment"),
+							project : me.dialog.get_value("project"),
+							cost_center : me.dialog.get_value("cost_center"),
+						},
+						callback(response) {
+
+						},
+					});
+
 				},
 			},
 		];

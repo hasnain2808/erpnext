@@ -176,7 +176,6 @@ def update_bank_transaction(bank_transaction, transaction_id, reference_number, 
 	# transaction = frappe.get_doc("Bank Transaction", bank_transaction)
 	# transaction.party_type = party_type
 	# transaction.save()
-	print("Bank Transaction", bank_transaction)
 	on = {
 		"transaction_id": transaction_id,
 		"reference_number": reference_number,
@@ -184,3 +183,69 @@ def update_bank_transaction(bank_transaction, transaction_id, reference_number, 
 		"party": party,
 	}
 	frappe.db.set_value("Bank Transaction", bank_transaction, on)
+
+@frappe.whitelist()
+def create_payment_entry_bts(
+		bank_transaction,
+		transaction_id,
+		reference_number,
+		reference_date,
+		party_type,
+		party,
+		posting_date,
+		mode_of_payment,
+		project,
+		cost_center
+	):
+	bank_transaction = frappe.get_doc("Bank Transaction", bank_transaction)
+
+	paid_amount = bank_transaction.credit if bank_transaction.credit > 0 else bank_transaction.debit
+
+	payment_type = "Receive" if bank_transaction.credit > 0 else "Pay";
+
+	party_type = "Customer" if bank_transaction.credit > 0 else "Supplier";
+
+# pe = frappe.new_doc("Payment Entry")
+#     pe.payment_type = "Pay"
+#     pe.company = "_Test Company 1"
+#     pe.posting_date = "2016-01-10"
+#     pe.paid_from = "_Test Bank USD - _TC1"
+#     pe.paid_to = "_Test Payable USD - _TC1"
+#     pe.paid_amount = 100
+#     pe.received_amount = 100
+#     pe.reference_no = "For IRS 1099 testing"
+#     pe.reference_date = "2016-01-10"
+#     pe.party_type = "Supplier"
+#     pe.party = "_US 1099 Test Supplier"
+#     pe.insert()
+#     pe.submit()
+	company_account = frappe.get_value("Bank Account", bank_transaction.bank_account, "account")
+
+	payment_entry = frappe.new_doc("Payment Entry")
+	# frappe.get_doc({
+	payment_entry.company = "Moha"
+	payment_entry.payment_type = payment_type
+	payment_entry.transaction_id =  transaction_id
+	payment_entry.reference_no =  reference_number
+	payment_entry.reference_date =  reference_date
+	payment_entry.party_type =  party_type
+	payment_entry.party =  party
+	payment_entry.posting_date =  posting_date
+	payment_entry.mode_of_payment =  mode_of_payment
+	payment_entry.project =  project
+	payment_entry.cost_center =  cost_center
+	payment_entry.paid_amount = paid_amount
+	payment_entry.received_amount = paid_amount
+	if payment_type == "Receive":
+		payment_entry.paid_to = company_account
+	else: 
+		payment_entry.paid_from = company_account
+
+	# })
+	# payment_entry.insert()
+	# payment_entry.set_exchange_rate()
+	# payment_entry.validate()
+	payment_entry.insert()
+	payment_entry.submit()
+
+	return payment_entry.name
