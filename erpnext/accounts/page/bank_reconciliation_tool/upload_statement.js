@@ -77,7 +77,7 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 							"filters": {
 								'name': this.upload_statement_dialog.get_value("bank_account")
 							},
-							"fieldname": ['bank'] 
+							"fieldname": ['bank']
 						},
 						callback: function (r) {
 							if (r.message != undefined) {
@@ -180,6 +180,7 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 								}, 5);							}
 						});
 						this.upload_statement_dialog.hide();
+						me.template_options= '{}';
 						delete this.upload_statement_dialog;
 						this.make_upload_statement_dialog();
 				}

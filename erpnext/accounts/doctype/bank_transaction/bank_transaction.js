@@ -13,7 +13,19 @@ frappe.ui.form.on('Bank Transaction', {
 	},
 	bank_account: function(frm) {
 		set_bank_statement_filter(frm)
+	},
+
+	setup: function(frm) {
+
+		frm.set_query("party_type", function() {
+			return{
+				filters: {
+					"name": ["in", Object.keys(frappe.boot.party_account_types)],
+				}
+			}
+		});
 	}
+
 });
 
 frappe.ui.form.on('Bank Transaction Payments', {

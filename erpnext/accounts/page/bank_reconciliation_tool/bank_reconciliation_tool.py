@@ -170,3 +170,17 @@ def write_xlsx(data, sheet_name, wb=None, column_widths=None, file_path=None):
 
 	wb.save(file_path)
 	return True
+
+@frappe.whitelist()
+def update_bank_transaction(bank_transaction, transaction_id, reference_number, party_type, party):
+	# transaction = frappe.get_doc("Bank Transaction", bank_transaction)
+	# transaction.party_type = party_type
+	# transaction.save()
+	print("Bank Transaction", bank_transaction)
+	on = {
+		"transaction_id": transaction_id,
+		"reference_number": reference_number,
+		"party_type": party_type,
+		"party": party,
+	}
+	frappe.db.set_value("Bank Transaction", bank_transaction, on)

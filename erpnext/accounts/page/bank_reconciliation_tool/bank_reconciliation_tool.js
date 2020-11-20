@@ -406,7 +406,7 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 				},
 				fieldname : ['date', 'debit', 'credit', 'currency',
 				'description', 'name', 'bank_account', 'company',
-				'reference_number', 'transaction_id'],
+				'reference_number', 'transaction_id', 'party_type', 'party'],
 			},
 			callback: function (r) {
 				if (r.message != undefined) {
@@ -417,10 +417,6 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 
 		}).then(()=>{
 		// me.upload_statement_dialog.get_field("bank").refresh()
-
-
-console.log(me.data)
-console.log(me.data.bank_account)
 
 			frappe.db.get_value(
 				"Bank Account",
@@ -598,13 +594,13 @@ console.log(me.data.bank_account)
 				label: "Description",
 				collapsible: 1,
 				depends_on: "eval:doc.action!='Match Payment Entry'"
-
 			},
 
 			{
 				fieldname: "description",
 				fieldtype: "Small Text",
 				read_only: 1,
+				default: me.data.description || 0
 			},
 			{
 				fieldtype: "Section Break",
@@ -617,12 +613,16 @@ console.log(me.data.bank_account)
 				fieldname: "reference_number",
 				fieldtype: "Data",
 				label: "Reference Number",
+				
+				default: me.data.reference_number || ''
 			},
 
 			{
 				fieldname: "transaction_id",
 				fieldtype: "Data",
 				label: "Transaction ID",
+				
+				default: me.data.transaction_id || ''
 			},
 			{
 				fieldname: "column_break_7",
@@ -634,12 +634,14 @@ console.log(me.data.bank_account)
 				fieldtype: "Link",
 				label: "Party Type",
 				options: "DocType",
+				default:  me.data.party_type || ( me.data.credit ? "Customer" : "Supplier")// me.data.party_type || ''
 			},
 			{
 				fieldname: "party",
 				fieldtype: "Dynamic Link",
 				label: "Party",
 				options: "party_type",
+				default: me.data.party || ''
 			},
 			// {
 			// 	fieldname: "reference_number",
@@ -654,8 +656,42 @@ console.log(me.data.bank_account)
 				depends_on: "eval:doc.action=='Update Bank Transaction'",
 				primary: 1,
 				click: () => {
+					console.log(me.dialog.get_value("transaction_id"))
+					console.log(me.dialog.get_value("reference_number"))
+					console.log(me.dialog.get_value("party_type"))
+					console.log(me.dialog.get_value("party"))
 					// me.make_update_transaction_dialog();
 					// me.update_transaction_dialog.show();
+					// frappe.db.set_value( 
+					// 	"Bank Transaction",
+					// 	me.data.name,
+					// 	// {
+					// 		// "transaction_id" , me.dialog.get_value("transaction_id"),
+					// 	// 	"reference_number" : me.dialog.get_value("reference_number"),
+					// 		"party_type" , me.dialog.get_value("party_type"),
+					// 	// 	"party" : me.dialog.get_value("party"),
+					// 	// }
+					// )
+
+					frappe.call({
+						method:
+							"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.update_bank_transaction",
+						args: {
+							bank_transaction : me.data.name,
+							transaction_id : me.dialog.get_value("transaction_id"),
+							reference_number : me.dialog.get_value("reference_number"),
+							party_type : me.dialog.get_value("party_type"),
+							party : me.dialog.get_value("party"),
+						},
+						callback(response) {
+							// me.account_opening_balance = response.message;
+							// me.form.set_value(
+							// 	"account_opening_balance",
+							// 	me.account_opening_balance
+							// );
+						},
+					});
+
 				},
 			},
 
