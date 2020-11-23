@@ -1,4 +1,5 @@
 import csv
+import json
 import re
 
 import openpyxl
@@ -10,11 +11,13 @@ import frappe
 from frappe.core.doctype.data_import.importer import Importer, ImportFile
 from frappe.model.document import Document
 from frappe import _
+from frappe.utils import flt
 from frappe.utils.background_jobs import enqueue
 from frappe.core.page.background_jobs.background_jobs import get_info
 from frappe.utils.scheduler import is_scheduler_inactive
 from frappe.utils.xlsxutils import handle_html, ILLEGAL_CHARACTERS_RE
 from erpnext.accounts.utils import get_balance_on
+from erpnext.accounts.report.bank_reconciliation_statement.bank_reconciliation_statement import get_entries, get_amounts_not_reflected_in_system
 
 
 @frappe.whitelist()
@@ -41,10 +44,30 @@ def get_bank_transactions(bank_account, from_date = None, to_date = None):
 def get_account_balance(bank_account, till_date):
 	account = frappe.db.get_value('Bank Account', bank_account, 'account')
 	print(account)
-	balance_as_per_system = get_balance_on(account, till_date)
-	print(balance_as_per_system)
-	return balance_as_per_system
+	# balance_as_per_system = get_balance_on(account, till_date)
+	# print(balance_as_per_system)
+	# return balance_as_per_system
+	filters = frappe._dict({
+		"account": account,
+		"report_date": till_date,
+		"include_pos_transactions": 1
+	})
+	print(type(filters))
+	data = get_entries(filters)
 
+	balance_as_per_system = get_balance_on(filters["account"], filters["report_date"])
+
+	total_debit, total_credit = 0,0
+	for d in data:
+		total_debit += flt(d.debit)
+		total_credit += flt(d.credit)
+
+	amounts_not_reflected_in_system = get_amounts_not_reflected_in_system(filters)
+
+	bank_bal = flt(balance_as_per_system) - flt(total_debit) + flt(total_credit) \
+		+ amounts_not_reflected_in_system
+
+	return bank_bal
 
 @frappe.whitelist()
 def get_importer_preview(import_file_path, data_import=None, template_options=None):

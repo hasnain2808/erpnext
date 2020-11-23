@@ -12,6 +12,7 @@ frappe.pages["bank-reconciliation-tool"].on_page_load = function (wrapper) {
 
 erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 	constructor(wrapper) {
+		console.log(wrapper);
 		this.page = frappe.ui.make_app_page({
 			parent: wrapper,
 			title: __("Bank Reconciliation Tool"),
@@ -37,8 +38,12 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 		this.page = this.parent.page;
 		this.upload_statement_dialog_object = new erpnext.accounts.UploadStatememt();
 		this.make_form();
-		// this.$result = $("#transactions");
-		this.$cards = $("#cards");
+		this.$reconciliation_tool_cards = this.form.get_field(
+			"reconciliation_tool_cards"
+		).$wrapper; //.find('.reconciliation_tool_cards')
+		this.$reconciliation_tool_dt = this.form.get_field(
+			"reconciliation_tool_dt"
+		).$wrapper; //.find('.reconciliation_tool_dt')
 	}
 
 	make_form() {
@@ -75,6 +80,21 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 
 						me.bank_account =
 							me.form.get_value("bank_account") || "";
+						frappe.db.get_value(
+							"Bank Account",
+							me.bank_account,
+							"account",
+							(r) => {
+								frappe.db.get_value(
+									"Account",
+									r.account,
+									"account_currency",
+									(r) => {
+										me.currency = r.account_currency;
+									}
+								);
+							}
+						);
 						this.get_account_opening_balance();
 						this.make_reconciliation_tool();
 					},
@@ -160,19 +180,14 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 					depends_on: "eval: doc.bank_statement_closing_balance",
 				},
 				{
-					fieldname: "transactions",
+					fieldname: "reconciliation_tool_cards",
 					fieldtype: "HTML",
-					options: `<div id = "cards"></div>`,
+					// options: `<div class = "reconciliation_tool_cards"></div>`,
 				},
 				{
-					fieldname: "transactions",
+					fieldname: "reconciliation_tool_dt",
 					fieldtype: "HTML",
-					options: `<div id = "transactions"></div>`,
-				},
-				{
-					fieldname: "transactions_dt",
-					fieldtype: "HTML",
-					options: `<div id = "transactions_dt"></div>`,
+					// options: `<div class = "reconciliation_tool_dt"></div>`,
 				},
 			],
 			body: me.page.body,
@@ -182,9 +197,9 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 
 	make_reconciliation_tool() {
 		const me = this;
-		$("#cards").empty();
+		me.$reconciliation_tool_cards.empty();
 		if (this.bank_account && this.bank_statement_to_date) {
-			me.get_account_closing_balance().then(() => {
+			me.get_cleared_balance().then(() => {
 				if (
 					this.bank_account &&
 					this.bank_statement_from_date &&
@@ -192,8 +207,12 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 					this.bank_statement_closing_balance
 				) {
 					me.render_chart();
-					// me.render_header();
 					me.render();
+					frappe.utils.scroll_to(
+						me.$reconciliation_tool_cards,
+						true,
+						30
+					);
 				}
 			});
 		}
@@ -220,7 +239,7 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 		}
 	}
 
-	get_account_closing_balance() {
+	get_cleared_balance() {
 		const me = this;
 		if (this.bank_account && this.bank_statement_to_date) {
 			return frappe.call({
@@ -231,74 +250,58 @@ erpnext.accounts.bankReconciliationTool = class BankReconciliationTool {
 					till_date: me.bank_statement_to_date,
 				},
 				callback(response) {
-					me.account_closing_balance = response.message;
+					me.cleared_balance = response.message;
 				},
 			});
 		}
 	}
 
 	render_chart() {
-		// $(".report-summary").remove();
 		const me = this;
-		this.$summary = $(`<div class="report-summary"></div>`)
-			.hide()
-			.appendTo(this.$cards);
-		var chart_data = [
-			{
-				value: me.bank_statement_closing_balance,
-				label: "Statement Ending Balance",
-				datatype: "Currency",
-				currency: "INR",
-			},
-			{
-				value: me.account_closing_balance,
-				label: "Cleared Balance",
-				datatype: "Currency",
-				currency: "INR",
-			},
-			{
-				indicator:
-					me.bank_statement_closing_balance -
-					me.account_closing_balance === 0
-						? "Green"
-						: "Red",
-				value:
-					me.bank_statement_closing_balance -
-					me.account_closing_balance,
-				label: "Difference",
-				datatype: "Currency",
-				currency: "INR",
-			},
-		];
-
-		chart_data.forEach((summary) => {
-			frappe.widget.utils
-				.build_summary_item(summary)
-				.appendTo(this.$summary);
-		});
-		this.$summary.css("border-bottom", "0px");
-		this.$summary.show();
+		me.cards_manager = new erpnext.accounts.ReconciliationNumberCardManager(
+			me.$reconciliation_tool_cards,
+			me.bank_statement_closing_balance,
+			me.cleared_balance,
+			me.currency
+		);
 	}
-
 
 	render() {
 		const me = this;
 		if (me.bank_account) {
-			this.reconciliation_data_table_manager = new erpnext.accounts.ReconciliationDataTableManager(me.bank_account);
+			this.reconciliation_data_table_manager = new erpnext.accounts.ReconciliationDataTableManager(
+				me.bank_account,
+				me.$reconciliation_tool_dt,
+				me.bank_statement_from_date,
+				me.bank_statement_to_date,
+				me.bank_statement_closing_balance,
+				me.cards_manager
+			);
 		}
 	}
 };
 
-
 erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableManager {
-	constructor(bank_account) {
+	constructor(
+		bank_account,
+		$reconciliation_tool_dt,
+		bank_statement_from_date,
+		bank_statement_to_date,
+		bank_statement_closing_balance,
+		cards_manager
+	) {
 		// this.data = data
-		this.bank_account = bank_account
-		this.make_dt()
+		this.bank_account = bank_account;
+		this.$reconciliation_tool_dt = $reconciliation_tool_dt;
+		this.bank_statement_from_date = bank_statement_from_date;
+		this.bank_statement_to_date = bank_statement_to_date;
+		this.bank_statement_closing_balance = bank_statement_closing_balance;
+		this.cards_manager = cards_manager;
+		this.make_dt();
 	}
 
-	make_dt(){
-		const me = this
+	make_dt() {
+		const me = this;
 
 		frappe.call({
 			method:
@@ -307,9 +310,7 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 				bank_account: me.bank_account,
 			},
 			callback(response) {
-				me.data = response.message
-
-
+				me.data = response.message;
 				const data = [];
 				me.data.forEach((row) => {
 					data.push([
@@ -345,20 +346,14 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 							$(`.dt-cell__content`)
 								.find(`.close`)
 								.click(event, function () {
-									console.log(
-										$(this).attr("data-name")
-									);
-									me.bank_entry = $(this).attr(
-										"data-name"
-									);
-									me.show_dialog(
-										$(this).attr("data-name")
-									);
+									console.log($(this).attr("data-name"));
+									me.bank_entry = $(this).attr("data-name");
+									me.show_dialog($(this).attr("data-name"));
 								});
 							return value;
 						},
 					},
-				]
+				];
 				let datatable_options = {
 					columns: columns,
 					data: data,
@@ -367,15 +362,15 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 					inlineFilters: true,
 				};
 
-				if (!this.datatable){
-				this.datatable = new frappe.DataTable(
-					"#transactions_dt",
-					datatable_options
-				);}
-				else{
-					this.datatable.refresh(data, columns)
+				if (!this.datatable) {
+					this.datatable = new frappe.DataTable(
+						me.$reconciliation_tool_dt.get(0),
+						datatable_options
+					);
+				} else {
+					this.datatable.refresh(data, columns);
 				}
-				$(`.dt-scrollable`).css('max-height','calc(100vh - 400px)');
+				$(`.dt-scrollable`).css("max-height", "calc(100vh - 400px)");
 				$(`.dt-scrollable`).on("click", `.close`, function () {
 					console.log($(this).attr("data-name"));
 					me.bank_entry = $(this).attr("data-name");
@@ -394,38 +389,50 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 		// 	"Bank Transaction",
 		// 	data
 		// );
-		console.log(me.data)
+		console.log(me.data);
 
-		frappe.call({
-			method: "frappe.client.get_value",
-			args: {
-				"doctype": "Bank Transaction",
-				"filters": {
-					'name': data
+		frappe
+			.call({
+				method: "frappe.client.get_value",
+				args: {
+					doctype: "Bank Transaction",
+					filters: {
+						name: data,
+					},
+					fieldname: [
+						"date",
+						"debit",
+						"credit",
+						"currency",
+						"description",
+						"name",
+						"bank_account",
+						"company",
+						"reference_number",
+						"transaction_id",
+						"party_type",
+						"party",
+					],
 				},
-				fieldname : ['date', 'debit', 'credit', 'currency',
-				'description', 'name', 'bank_account', 'company',
-				'reference_number', 'transaction_id', 'party_type', 'party'],
-			},
-			callback: function (r) {
-				if (r.message != undefined) {
-					console.log(r.message)
-					me.data = r.message
-				}
-			}
+				callback: function (r) {
+					if (r.message != undefined) {
+						console.log(r.message);
+						me.data = r.message;
+					}
+				},
+			})
+			.then(() => {
+				// me.upload_statement_dialog.get_field("bank").refresh()
 
-		}).then(()=>{
-		// me.upload_statement_dialog.get_field("bank").refresh()
-
-			frappe.db.get_value(
-				"Bank Account",
-				me.data.bank_account,
-				"account",
-				(r) => {
-					me.gl_account = r.account;
-				}
-			);
-		})
+				frappe.db.get_value(
+					"Bank Account",
+					me.data.bank_account,
+					"account",
+					(r) => {
+						me.gl_account = r.account;
+					}
+				);
+			});
 		frappe
 			.xcall(
 				"erpnext.accounts.page.bank_reconciliation.bank_reconciliation.get_linked_payments",
@@ -451,19 +458,18 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 			// 	label: "Action"
 			// },
 			{
-				label: __('Action'),
-				fieldname: 'action',
-				fieldtype: 'Select',
+				label: __("Action"),
+				fieldname: "action",
+				fieldtype: "Select",
 				options: `Match Payment Entry\nAdd Payment Entry\nUpdate Bank Transaction`,
-				default: 'Match Payment Entry'
+				default: "Match Payment Entry",
 			},
-
 
 			{
 				fieldtype: "Section Break",
 				fieldname: "section_break_1",
 				label: __("Automatic Reconciliation"),
-				depends_on: "eval:doc.action=='Match Payment Entry'"
+				depends_on: "eval:doc.action=='Match Payment Entry'",
 			},
 			{
 				fieldtype: "HTML",
@@ -473,8 +479,7 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 				fieldtype: "Section Break",
 				fieldname: "section_break_2",
 				label: __("Search for a payment"),
-				depends_on: "eval:doc.action=='Match Payment Entry'"
-
+				depends_on: "eval:doc.action=='Match Payment Entry'",
 			},
 
 			{
@@ -592,27 +597,26 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 				fieldname: "description_section",
 				label: "Description",
 				collapsible: 1,
-				depends_on: "eval:doc.action!='Match Payment Entry'"
+				depends_on: "eval:doc.action!='Match Payment Entry'",
 			},
 
 			{
 				fieldname: "description",
 				fieldtype: "Small Text",
 				read_only: 1,
-				default: me.data.description || 0
+				default: me.data.description || 0,
 			},
 			{
 				fieldtype: "Section Break",
 				fieldname: "references_party",
 				label: "References and Party Details",
-				depends_on: "eval:doc.action!='Match Payment Entry'"
-
+				depends_on: "eval:doc.action!='Match Payment Entry'",
 			},
 			{
 				fieldname: "reference_number",
 				fieldtype: "Data",
 				label: "Reference Number",
-				default: me.data.reference_number || '',
+				default: me.data.reference_number || "",
 				mandatory_depends_on: "eval:doc.action=='Add Payment Entry'",
 			},
 
@@ -620,7 +624,7 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 				fieldname: "transaction_id",
 				fieldtype: "Data",
 				label: "Transaction ID",
-				default: me.data.transaction_id || ''
+				default: me.data.transaction_id || "",
 			},
 			{
 				default: "Today",
@@ -629,7 +633,6 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 				label: "Posting Date",
 				reqd: 1,
 				depends_on: "eval:doc.action=='Add Payment Entry'",
-
 			},
 			{
 				fieldname: "reference_date",
@@ -637,14 +640,14 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 				label: "Cheque/Reference Date",
 				depends_on: "eval:doc.action=='Add Payment Entry'",
 				reqd: 1,
-			   },
+			},
 			{
 				fieldname: "mode_of_payment",
 				fieldtype: "Link",
 				label: "Mode of Payment",
 				options: "Mode of Payment",
 				depends_on: "eval:doc.action=='Add Payment Entry'",
-			   },
+			},
 			{
 				fieldname: "column_break_7",
 				fieldtype: "Column Break",
@@ -655,7 +658,9 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 				fieldtype: "Link",
 				label: "Party Type",
 				options: "DocType",
-				default:  me.data.party_type || ( me.data.credit ? "Customer" : "Supplier"),
+				default:
+					me.data.party_type ||
+					(me.data.credit ? "Customer" : "Supplier"),
 				mandatory_depends_on: "eval:doc.action=='Add Payment Entry'",
 			},
 			{
@@ -663,7 +668,7 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 				fieldtype: "Dynamic Link",
 				label: "Party",
 				options: "party_type",
-				default: me.data.party || '',
+				default: me.data.party || "",
 				mandatory_depends_on: "eval:doc.action=='Add Payment Entry'",
 			},
 			{
@@ -672,8 +677,7 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 				label: "Project",
 				options: "Project",
 				depends_on: "eval:doc.action=='Add Payment Entry'",
-
-			   },
+			},
 			{
 				fieldname: "cost_center",
 				fieldtype: "Link",
@@ -689,13 +693,13 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 				depends_on: "eval:doc.action=='Update Bank Transaction'",
 				primary: 1,
 				click: () => {
-					console.log(me.dialog.get_value("transaction_id"))
-					console.log(me.dialog.get_value("reference_number"))
-					console.log(me.dialog.get_value("party_type"))
-					console.log(me.dialog.get_value("party"))
+					console.log(me.dialog.get_value("transaction_id"));
+					console.log(me.dialog.get_value("reference_number"));
+					console.log(me.dialog.get_value("party_type"));
+					console.log(me.dialog.get_value("party"));
 					// me.make_update_transaction_dialog();
 					// me.update_transaction_dialog.show();
-					// frappe.db.set_value( 
+					// frappe.db.set_value(
 					// 	"Bank Transaction",
 					// 	me.data.name,
 					// 	// {
@@ -710,11 +714,15 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 						method:
 							"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.update_bank_transaction",
 						args: {
-							bank_transaction : me.data.name,
-							transaction_id : me.dialog.get_value("transaction_id"),
-							reference_number : me.dialog.get_value("reference_number"),
-							party_type : me.dialog.get_value("party_type"),
-							party : me.dialog.get_value("party"),
+							bank_transaction: me.data.name,
+							transaction_id: me.dialog.get_value(
+								"transaction_id"
+							),
+							reference_number: me.dialog.get_value(
+								"reference_number"
+							),
+							party_type: me.dialog.get_value("party_type"),
+							party: me.dialog.get_value("party"),
 						},
 						callback(response) {
 							// me.account_opening_balance = response.message;
@@ -724,7 +732,6 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 							// );
 						},
 					});
-
 				},
 			},
 
@@ -735,37 +742,42 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 				primary: 1,
 				depends_on: "eval:doc.action=='Add Payment Entry'",
 				click: () => {
-				console.log(me.data.name)
-				console.log(me.dialog.get_value("transaction_id"),)
-				console.log(me.dialog.get_value("reference_number"),)
-				console.log(me.dialog.get_value("reference_date"),)
-				console.log(me.dialog.get_value("party_type"),)
-				console.log(me.dialog.get_value("party"),)
-				console.log(me.dialog.get_value("posting_date"),)
-				console.log(me.dialog.get_value("mode_of_payment"),)
-				console.log(me.dialog.get_value("project"),)
-				console.log(me.dialog.get_value("cost_center"),)
+					console.log(me.data.name);
+					console.log(me.dialog.get_value("transaction_id"));
+					console.log(me.dialog.get_value("reference_number"));
+					console.log(me.dialog.get_value("reference_date"));
+					console.log(me.dialog.get_value("party_type"));
+					console.log(me.dialog.get_value("party"));
+					console.log(me.dialog.get_value("posting_date"));
+					console.log(me.dialog.get_value("mode_of_payment"));
+					console.log(me.dialog.get_value("project"));
+					console.log(me.dialog.get_value("cost_center"));
 
 					frappe.call({
 						method:
 							"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.create_payment_entry_bts",
 						args: {
-							bank_transaction : me.data.name,
-							transaction_id : me.dialog.get_value("transaction_id"),
-							reference_number : me.dialog.get_value("reference_number"),
-							reference_date : me.dialog.get_value("reference_date"),
-							party_type : me.dialog.get_value("party_type"),
-							party : me.dialog.get_value("party"),
-							posting_date : me.dialog.get_value("posting_date"),
-							mode_of_payment : me.dialog.get_value("mode_of_payment"),
-							project : me.dialog.get_value("project"),
-							cost_center : me.dialog.get_value("cost_center"),
+							bank_transaction: me.data.name,
+							transaction_id: me.dialog.get_value(
+								"transaction_id"
+							),
+							reference_number: me.dialog.get_value(
+								"reference_number"
+							),
+							reference_date: me.dialog.get_value(
+								"reference_date"
+							),
+							party_type: me.dialog.get_value("party_type"),
+							party: me.dialog.get_value("party"),
+							posting_date: me.dialog.get_value("posting_date"),
+							mode_of_payment: me.dialog.get_value(
+								"mode_of_payment"
+							),
+							project: me.dialog.get_value("project"),
+							cost_center: me.dialog.get_value("cost_center"),
 						},
-						callback(response) {
-
-						},
+						callback(response) {},
 					});
-
 				},
 			},
 		];
@@ -791,7 +803,6 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 				);
 			});
 		} else {
-
 			me.dialog.get_field("section_break_1").df.hidden = 1;
 			me.dialog.get_field("section_break_1").refresh();
 		}
@@ -799,36 +810,52 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 		$(me.dialog.body).on("click", ".reconciliation-btn", (e) => {
 			const payment_entry = $(e.target).attr("data-name");
 			const payment_doctype = $(e.target).attr("data-doctype");
-			frappe
-				.xcall(
+			frappe.call({
+				method:
 					"erpnext.accounts.page.bank_reconciliation.bank_reconciliation.reconcile",
-					{
-						bank_transaction: me.bank_entry,
-						payment_doctype: payment_doctype,
-						payment_name: payment_entry,
-					}
-				)
-				.then((result) => {
+				args: {
+					bank_transaction: me.bank_entry,
+					payment_doctype: payment_doctype,
+					payment_name: payment_entry,
+				},
+				callback: (result) => {
 					setTimeout(function () {
-						me.make_dt()
-						// erpnext.accounts.ReconciliationList.refresh();
+						me.make_dt();
+						me.get_cleared_balance().then(() => {
+							me.cards_manager.$cards[1].set_value(
+								format_currency(me.cleared_balance),
+								me.currency
+							);
+							me.cards_manager.$cards[2].set_value(
+								format_currency(
+									me.bank_statement_closing_balance -
+										me.cleared_balance
+								),
+								me.currency
+							);
+							me.cards_manager.$cards[2].set_indicator(
+								me.bank_statement_closing_balance -
+									me.cleared_balance ==
+									0
+									? "green"
+									: "red"
+							);
+						});
 					}, 2000);
 					me.dialog.hide();
-				});
+				},
+			});
 		});
-
 		me.dialog.show();
 		me.dialog.get_field("section_break_3").df.hidden = 1;
 		me.dialog.get_field("section_break_3").refresh();
 	}
 
-
-
 	display_payment_details(event) {
 		const me = this;
 		if (event.value) {
-			me.dialog.get_field('section_break_3').df.hidden = 0
-			me.dialog.get_field('section_break_3').refresh()
+			me.dialog.get_field("section_break_3").df.hidden = 0;
+			me.dialog.get_field("section_break_3").refresh();
 			let dt = me.dialog.fields_dict.payment_doctype.value;
 			me.dialog.fields_dict["payment_details"].$wrapper.empty();
 			frappe.db.get_doc(dt, event.value).then((doc) => {
@@ -895,4 +922,101 @@ erpnext.accounts.ReconciliationDataTableManager = class ReconciliationDataTableM
 			});
 		}
 	}
-}
+
+	get_cleared_balance() {
+		const me = this;
+		if (this.bank_account && this.bank_statement_to_date) {
+			return frappe.call({
+				method:
+					"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.get_account_balance",
+				args: {
+					bank_account: this.bank_account,
+					till_date: me.bank_statement_to_date,
+				},
+				callback(response) {
+					me.cleared_balance = response.message;
+				},
+			});
+		}
+	}
+};
+
+erpnext.accounts.ReconciliationNumberCardManager = class ReconciliationNumberCardManager {
+	constructor(
+		$reconciliation_tool_cards,
+		bank_statement_closing_balance,
+		cleared_balance,
+		currency
+	) {
+		// this.data = data
+		this.$reconciliation_tool_cards = $reconciliation_tool_cards;
+		this.bank_statement_closing_balance = bank_statement_closing_balance;
+		this.cleared_balance = cleared_balance;
+		this.currency = currency;
+		this.make_cards();
+	}
+
+	make_cards() {
+		this.$cards = [];
+		const me = this;
+		this.$summary = $(`<div class="report-summary"></div>`)
+			.hide()
+			.appendTo(this.$reconciliation_tool_cards);
+		var chart_data = [
+			{
+				value: me.bank_statement_closing_balance,
+				label: "Statement Ending Balance",
+				datatype: "Currency",
+				currency: me.currency,
+			},
+			{
+				value: me.cleared_balance,
+				label: "Cleared Balance",
+				datatype: "Currency",
+				currency: me.currency,
+			},
+			{
+				indicator:
+					me.bank_statement_closing_balance - me.cleared_balance == 0
+						? "Green"
+						: "Red",
+				value: me.bank_statement_closing_balance - me.cleared_balance,
+				label: "Difference",
+				datatype: "Currency",
+				currency: me.currency,
+			},
+		];
+
+		chart_data.forEach((summary) => {
+			// frappe.widget.utils
+			// 	.build_summary_item(summary)
+
+			let number_card = new erpnext.accounts.NumberCard(summary);
+			this.$cards.push(number_card);
+
+			number_card.$card.appendTo(this.$summary);
+		});
+		console.log(this.$cards);
+		// this.$cards[0].set_value(40)
+		// this.$cards[2].set_indicator('green')
+		this.$summary.css("border-bottom", "0px");
+		this.$summary.show();
+	}
+};
+
+erpnext.accounts.NumberCard = class NumberCard {
+	constructor(options) {
+		this.$card = frappe.widget.utils.build_summary_item(options);
+	}
+
+	set_value(value) {
+		this.$card.find("div").text(value);
+	}
+
+	set_indicator(color) {
+		this.$card
+			.find("span")
+			.removeClass("indicator red green")
+			.addClass(`indicator ${color}`);
+	}
+};
