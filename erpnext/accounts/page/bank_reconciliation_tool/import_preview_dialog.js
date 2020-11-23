@@ -13,20 +13,9 @@ frappe.require('/assets/js/data_import_tools.min.js', () => {
 				{
 					label: __('Map Columns'),
 					handler: 'show_column_mapper',
-					condition: true//this.frm.doc.status !== 'Success'
+					condition: true
 				},
-				{
-					label: __('Export Errored Rows'),
-					handler: 'export_errored_rows',
-					condition: this.import_log.filter(log => !log.success).length > 0
-				},
-				// {
-				// 	label: __('Show Warnings'),
-				// 	handler: 'show_warnings',
-				// 	condition: this.preview_data.warnings.length > 0
-				// }
 			];
-	
 			let html = actions
 				.filter(action => action.condition)
 				.map(action => {
@@ -35,7 +24,6 @@ frappe.require('/assets/js/data_import_tools.min.js', () => {
 					</button>
 				`;
 				});
-	
 			this.wrapper.find('.table-actions').html(html);
 		}
 
@@ -140,12 +128,10 @@ frappe.require('/assets/js/data_import_tools.min.js', () => {
 				}
 				return keep;
 			};
-		
-			// parent
+
 			let doctype_fields = frappe.meta
 				.get_docfields(doctype)
 				.filter(exportable_fields);
-		
 			out[doctype] = [
 				{
 					label: __('ID'),
@@ -154,7 +140,7 @@ frappe.require('/assets/js/data_import_tools.min.js', () => {
 					reqd: 1
 				}
 			].concat(doctype_fields);
-		
+
 			// children
 			const table_fields = frappe.meta.get_table_fields(doctype);
 			table_fields.forEach(df => {
@@ -162,7 +148,7 @@ frappe.require('/assets/js/data_import_tools.min.js', () => {
 				const child_table_fields = frappe.meta
 					.get_docfields(cdt)
 					.filter(exportable_fields);
-		
+
 				out[df.fieldname] = [
 					{
 						label: __('ID'),
@@ -172,10 +158,10 @@ frappe.require('/assets/js/data_import_tools.min.js', () => {
 					}
 				].concat(child_table_fields);
 			});
-		
+
 			return out;
 		}
-		
+
 
 		get_fields_as_options(doctype, column_map) {
 			let keys = [doctype];

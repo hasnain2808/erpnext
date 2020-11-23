@@ -1,5 +1,4 @@
 {% include "erpnext/accounts/page/bank_reconciliation_tool/upload_statement.js" %};
-{% include "erpnext/accounts/page/bank_reconciliation_tool/reconciliation_row.js" %};
 {% include "erpnext/accounts/page/bank_reconciliation_tool/import_preview_dialog.js" %};
 
 // import DataTable from 'frappe-datatable';

@@ -1,17 +1,21 @@
-import frappe
 import csv
-import openpyxl
 import re
+
+import openpyxl
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 from six import string_types
 
-from erpnext.accounts.utils import get_balance_on
+import frappe
 from frappe.core.doctype.data_import.importer import Importer, ImportFile
 from frappe.model.document import Document
+from frappe import _
 from frappe.utils.background_jobs import enqueue
-
+from frappe.core.page.background_jobs.background_jobs import get_info
+from frappe.utils.scheduler import is_scheduler_inactive
 from frappe.utils.xlsxutils import handle_html, ILLEGAL_CHARACTERS_RE
+from erpnext.accounts.utils import get_balance_on
+
 
 @frappe.whitelist()
 def get_bank_transactions(bank_account, from_date = None, to_date = None):
@@ -44,25 +48,19 @@ def get_account_balance(bank_account, till_date):
 
 @frappe.whitelist()
 def get_importer_preview(import_file_path, data_import=None, template_options=None):
-	dat_data_import = frappe.get_doc(doctype="Data Import")
-	dat_data_import.import_type = "Insert New Records"
-	dat_data_import.reference_doctype = "Bank Transaction"
-	dat_data_import.import_file = import_file_path
-	dat_data_import.submit_after_import = 1
-	dat_data_import.template_options = template_options
-	print(dat_data_import)
-	print(dat_data_import.template_options)
-	importer = Importer("Bank Transaction", data_import=dat_data_import, file_path = import_file_path)
+	data_import = frappe.get_doc(doctype="Data Import")
+	data_import.import_type = "Insert New Records"
+	data_import.reference_doctype = "Bank Transaction"
+	data_import.import_file = import_file_path
+	data_import.submit_after_import = 1
+	data_import.template_options = template_options
+	importer = Importer("Bank Transaction", data_import=data_import, file_path = import_file_path)
 	preview = importer.get_data_for_import_preview()
-	return {"preview":preview, "import_name": importer.data_import.name}
+	return {"preview":preview}
 
 
 @frappe.whitelist()
 def form_start_import(import_file_path, data_import=None, template_options=None, bank_account=None):
-
-
-	from frappe.core.page.background_jobs.background_jobs import get_info
-	from frappe.utils.scheduler import is_scheduler_inactive
 
 	if is_scheduler_inactive() and not frappe.flags.in_test:
 		frappe.throw(
@@ -85,58 +83,56 @@ def form_start_import(import_file_path, data_import=None, template_options=None,
 		)
 		return True
 	return False
-	# return frappe.get_doc("Data Import", data_import).start_import()
 
 
-
-
-
-def start_import(import_file_path, data_import=None, template_options=None, bank_account=None):
+def start_import(import_file_path, template_options=None, bank_account=None):
 	"""This method runs in background job"""
-	# data_import = frappe.get_doc("Data Import", data_import)
-	dat_data_import = frappe.get_doc(doctype="Data Import")
-	dat_data_import.import_type = "Insert New Records"
-	dat_data_import.reference_doctype = "Bank Transaction"
-	dat_data_import.import_file = import_file_path
-	dat_data_import.submit_after_import = 1
-	dat_data_import.template_options = template_options
-	try:
-		print(template_options)
-		import_file = ImportFile("Bank Transaction", file = import_file_path, import_type="Insert New Records")
-		data = import_file.raw_data
+	data_import = frappe.get_doc(doctype="Data Import")
+	data_import.import_type = "Insert New Records"
+	data_import.reference_doctype = "Bank Transaction"
+	data_import.import_file = import_file_path
+	data_import.submit_after_import = 1
+	data_import.template_options = template_options
+
+	import_file = ImportFile("Bank Transaction", file = import_file_path, import_type="Insert New Records")
+	data = import_file.raw_data
+
+	bank_account_loc = None
+
+	if "Bank Account" not in data[0]:
 		data[0].append("Bank Account")
-		print(bank_account)
-		for row in data[1:]:
+	else:
+		for loc, header in enumerate(data[0]):
+			if header == "Bank Account":
+				bank_account_loc = loc
+
+	for row in data[1:]:
+		if bank_account_loc:
+			row[bank_account_loc] = bank_account
+		else:
 			row.append(bank_account)
-		print(data)
-		full_file_path = import_file.file_doc.get_full_path()
-		parts = import_file.file_doc.get_extension()
-		extension = parts[1]
-		extension = extension.lstrip(".")
-		print(extension)
-		import csv
 
+	full_file_path = import_file.file_doc.get_full_path()
+	parts = import_file.file_doc.get_extension()
+	extension = parts[1]
+	extension = extension.lstrip(".")
 
-		if extension == "csv":
-			with open(full_file_path, 'w', newline='') as file:
-				writer = csv.writer(file)
-				writer.writerows(data)
-		elif extension == "xlsx" or "xls":
-			write_xlsx(data, "trans", file_path = full_file_path)
+	if extension == "csv":
+		with open(full_file_path, 'w', newline='') as file:
+			writer = csv.writer(file)
+			writer.writerows(data)
+	elif extension == "xlsx" or "xls":
+		write_xlsx(data, "trans", file_path = full_file_path)
 
-
-
-		i = Importer("Bank Transaction", data_import=dat_data_import, file_path = import_file_path)
-
+	try:
+		i = Importer("Bank Transaction", data_import=data_import, file_path = import_file_path)
 		i.import_data()
 	except Exception:
 		frappe.db.rollback()
 		data_import.db_set("status", "Error")
-		frappe.log_error(title=data_import.name)
+		frappe.log_error(title="data_import")
 	finally:
 		frappe.flags.in_import = False
-
-	# frappe.publish_realtime("data_import_refresh", {"data_import": data_import.name})
 
 def write_xlsx(data, sheet_name, wb=None, column_widths=None, file_path=None):
 	column_widths = column_widths or []
@@ -173,16 +169,14 @@ def write_xlsx(data, sheet_name, wb=None, column_widths=None, file_path=None):
 
 @frappe.whitelist()
 def update_bank_transaction(bank_transaction, transaction_id, reference_number, party_type, party):
-	# transaction = frappe.get_doc("Bank Transaction", bank_transaction)
-	# transaction.party_type = party_type
-	# transaction.save()
-	on = {
+
+	updates = {
 		"transaction_id": transaction_id,
 		"reference_number": reference_number,
 		"party_type": party_type,
 		"party": party,
 	}
-	frappe.db.set_value("Bank Transaction", bank_transaction, on)
+	frappe.db.set_value("Bank Transaction", bank_transaction, updates)
 
 @frappe.whitelist()
 def create_payment_entry_bts(
@@ -198,31 +192,12 @@ def create_payment_entry_bts(
 		cost_center
 	):
 	bank_transaction = frappe.get_doc("Bank Transaction", bank_transaction)
-
 	paid_amount = bank_transaction.credit if bank_transaction.credit > 0 else bank_transaction.debit
+	payment_type = "Receive" if bank_transaction.credit > 0 else "Pay"
+	party_type = "Customer" if bank_transaction.credit > 0 else "Supplier"
 
-	payment_type = "Receive" if bank_transaction.credit > 0 else "Pay";
-
-	party_type = "Customer" if bank_transaction.credit > 0 else "Supplier";
-
-# pe = frappe.new_doc("Payment Entry")
-#     pe.payment_type = "Pay"
-#     pe.company = "_Test Company 1"
-#     pe.posting_date = "2016-01-10"
-#     pe.paid_from = "_Test Bank USD - _TC1"
-#     pe.paid_to = "_Test Payable USD - _TC1"
-#     pe.paid_amount = 100
-#     pe.received_amount = 100
-#     pe.reference_no = "For IRS 1099 testing"
-#     pe.reference_date = "2016-01-10"
-#     pe.party_type = "Supplier"
-#     pe.party = "_US 1099 Test Supplier"
-#     pe.insert()
-#     pe.submit()
 	company_account = frappe.get_value("Bank Account", bank_transaction.bank_account, "account")
-
 	payment_entry = frappe.new_doc("Payment Entry")
-	# frappe.get_doc({
 	payment_entry.company = "Moha"
 	payment_entry.payment_type = payment_type
 	payment_entry.transaction_id =  transaction_id
@@ -236,15 +211,11 @@ def create_payment_entry_bts(
 	payment_entry.cost_center =  cost_center
 	payment_entry.paid_amount = paid_amount
 	payment_entry.received_amount = paid_amount
+
 	if payment_type == "Receive":
 		payment_entry.paid_to = company_account
-	else: 
+	else:
 		payment_entry.paid_from = company_account
-
-	# })
-	# payment_entry.insert()
-	# payment_entry.set_exchange_rate()
-	# payment_entry.validate()
 	payment_entry.insert()
 	payment_entry.submit()
 
