@@ -7,11 +7,9 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 
 	make_upload_statement_dialog() {
 		const me = this;
-		const fields = me.get_upload_statement_dialog_fields();
-
 		me.upload_statement_dialog = new frappe.ui.Dialog({
 			title: __("Upload Bank Statements"),
-			fields: fields,
+			fields: me.get_upload_statement_dialog_fields(),
 			size: "large",
 			primary_action: (values) =>
 				me.upload_statement_dialog_primary_action(values),
@@ -30,19 +28,10 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 			},
 			{
 				fieldtype: "Attach",
-				fieldname: "import_bank_transactions",
+				fieldname: "bank_statement",
 				depends_on: "eval: doc.bank_account",
-				label: __("Import Bank Transactions"),
-				change: () => {
-					if (
-						me.upload_statement_dialog.get_value(
-							"import_bank_transactions"
-						)
-					) {
-						me.show_preview();
-					}
-					me.upload_statement_dialog.refresh_dependency();
-				},
+				label: __("Attach Bank Statement"),
+				change: () => me.on_bank_statement_uploaded(),
 			},
 			{
 				fieldtype: "Column Break",
@@ -53,44 +42,8 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 				label: __("Bank Account"),
 				options: "Bank Account",
 				depends_on: "eval: doc.company",
-				get_query: () => {
-					return {
-						filters: {
-							company: [
-								"in",
-								[
-									me.upload_statement_dialog.get_value(
-										"company"
-									) || "",
-								],
-							],
-						},
-					};
-				},
-				change: () => {
-					me.upload_statement_dialog.refresh_dependency();
-					frappe.call({
-						async: false,
-						method: "frappe.client.get_value",
-						args: {
-							doctype: "Bank Account",
-							filters: {
-								name: me.upload_statement_dialog.get_value(
-									"bank_account"
-								),
-							},
-							fieldname: ["bank"],
-						},
-						callback: function (r) {
-							if (r.message) {
-								me.upload_statement_dialog.set_value(
-									"bank",
-									r.message["bank"]
-								);
-							}
-						},
-					});
-				},
+				get_query: () => me.filter_by_company(),
+				change: () => me.on_bank_account_selected(),
 			},
 			{
 				fieldtype: "Link",
@@ -106,7 +59,7 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 				fieldname: "section_import_preview",
 				fieldtype: "Section Break",
 				label: __("Preview"),
-				depends_on: "eval: doc.import_bank_transactions",
+				depends_on: "eval: doc.bank_statement",
 			},
 			{
 				fieldname: "import_preview",
@@ -124,7 +77,7 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 				fieldname: "import_warnings_section",
 				fieldtype: "Section Break",
 				label: __("Import File Errors and Warnings"),
-				depends_on: "eval: doc.import_bank_transactions",
+				depends_on: "eval: doc.bank_statement",
 			},
 			{
 				fieldname: "import_warnings",
@@ -134,43 +87,85 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 		];
 	}
 
-	upload_statement_dialog_primary_action(values) {
-		const me = this;
-		if (values.import_bank_transactions) {
-			frappe
-				.call({
-					method:
-						"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.form_start_import",
-					args: {
-						import_file_path: values.import_bank_transactions,
-						template_options: me.template_options,
-						bank_account: values.bank_account,
-					},
-				})
-				.then((r) => {
-					if (r.message === true) {
-						frappe.show_alert(
-							{
-								message: __(
-									"The Trasactions will be imported in background"
-								),
-								indicator: "green",
-							},
-							5
-						);
-					}
-				});
-			me.upload_statement_dialog.hide();
-			me.template_options = "{}";
-			delete me.upload_statement_dialog;
-			me.make_upload_statement_dialog();
-		}
+	filter_by_company() {
+		const me = this
+		return {
+			filters: {
+				company: [
+					"in",
+					[me.upload_statement_dialog.get_value("company") || ""],
+				],
+			},
+		};
 	}
 
+	on_bank_statement_uploaded() {
+		const me = this;
+		if (me.upload_statement_dialog.get_value("bank_statement"))
+			me.show_preview();
+		me.upload_statement_dialog.refresh_dependency();
+	}
+
+	on_bank_account_selected() {
+		const me = this;
+		me.upload_statement_dialog.refresh_dependency();
+		frappe.call({
+			method: "frappe.client.get_value",
+			args: {
+				doctype: "Bank Account",
+				filters: me.get_bank_account_filters(),
+				fieldname: ["bank"],
+			},
+			callback: (r) => me.set_bank(r.message),
+		});
+	}
+
+	get_bank_account_filters() {
+		const me = this;
+		return { name: me.upload_statement_dialog.get_value("bank_account") };
+	}
+
+	set_bank(message) {
+		const me = this
+		me.upload_statement_dialog.set_value("bank", message["bank"]);
+	}
+
+	upload_statement_dialog_primary_action(values) {
+		const me = this;
+		if (!values.bank_statement) return;
+		me.start_import(values);
+		me.upload_statement_dialog.hide();
+		me.template_options = "{}";
+		delete me.upload_statement_dialog;
+		me.make_upload_statement_dialog();
+	}
+
+	start_import(values) {
+		const me = this;
+		frappe.call({
+			method:
+				"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.form_start_import",
+			args: me.get_import_args(values),
+			callback: (r) => me.show_bg_import_message(r),
+		});
+	}
+
+	get_import_args(values) {
+		return {
+			import_file_path: values.bank_statement,
+			template_options: this.template_options,
+			bank_account: values.bank_account,
+		};
+	}
+	show_bg_import_message(r) {
+		if (!r.message) return;
+		const message = __("The Transactions will be imported in background");
+		frappe.show_alert({ message: message, indicator: "green" }, 5);
+	}
 	show_preview() {
 		const me = this;
 		const file_name = me.upload_statement_dialog.get_value(
-			"import_bank_transactions"
+			"bank_statement"
 		);
 		me.upload_statement_dialog.get_field("import_preview").$wrapper.empty();
 		$('<span class="text-muted">')
