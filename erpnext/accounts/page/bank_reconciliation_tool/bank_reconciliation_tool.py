@@ -2,10 +2,11 @@ import csv
 import json
 import re
 
+import difflib
 import openpyxl
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
-from six import string_types
+from six import string_types, iteritems
 
 import frappe
 from frappe.core.doctype.data_import.importer import Importer, ImportFile
@@ -16,6 +17,8 @@ from frappe.utils.background_jobs import enqueue
 from frappe.core.page.background_jobs.background_jobs import get_info
 from frappe.utils.scheduler import is_scheduler_inactive
 from frappe.utils.xlsxutils import handle_html, ILLEGAL_CHARACTERS_RE
+
+from erpnext import get_company_currency
 from erpnext.accounts.utils import get_balance_on
 from erpnext.accounts.report.bank_reconciliation_statement.bank_reconciliation_statement import get_entries, get_amounts_not_reflected_in_system
 
@@ -34,7 +37,7 @@ def get_bank_transactions(bank_account, from_date = None, to_date = None):
 		'Bank Transaction',
 		fields = ['date', 'debit', 'credit', 'currency',
 		'description', 'name', 'bank_account', 'company',
-		'reference_number', 'transaction_id'],
+		'reference_number', 'transaction_id', 'party_type', 'party'],
 		filters = filters
 	)
 	print(len(transactions))
