@@ -152,18 +152,19 @@ erpnext.accounts.BankReconciliationDataTableManager = class BankReconciliationDa
 					}
 				);
 			});
-		frappe
-			.xcall(
-				"erpnext.accounts.page.bank_reconciliation.bank_reconciliation.get_linked_payments",
-				{
-					bank_transaction: data,
-					freeze: true,
-					freeze_message: __("Finding linked payments"),
-				}
-			)
-			.then((result) => {
+		frappe.call({
+			method:
+				"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.get_linked_payments",
+			args: {
+				bank_transaction: data,
+				freeze: true,
+				freeze_message: __("Finding linked payments"),
+			},
+
+			callback: (result) => {
 				me.make_dialog(result);
-			});
+			},
+		});
 	}
 
 	make_dialog(data) {
@@ -237,7 +238,7 @@ erpnext.accounts.BankReconciliationDataTableManager = class BankReconciliationDa
 					if (dt === "Payment Entry") {
 						return {
 							query:
-								"erpnext.accounts.page.bank_reconciliation.bank_reconciliation.payment_entry_query",
+								"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.payment_entry_query",
 							filters: {
 								bank_account: this.data.bank_account,
 								company: this.data.company,
@@ -246,7 +247,7 @@ erpnext.accounts.BankReconciliationDataTableManager = class BankReconciliationDa
 					} else if (dt === "Journal Entry") {
 						return {
 							query:
-								"erpnext.accounts.page.bank_reconciliation.bank_reconciliation.journal_entry_query",
+								"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.journal_entry_query",
 							filters: {
 								bank_account: this.data.bank_account,
 								company: this.data.company,
@@ -255,7 +256,7 @@ erpnext.accounts.BankReconciliationDataTableManager = class BankReconciliationDa
 					} else if (dt === "Sales Invoice") {
 						return {
 							query:
-								"erpnext.accounts.page.bank_reconciliation.bank_reconciliation.sales_invoices_query",
+								"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.sales_invoices_query",
 						};
 					} else if (dt === "Purchase Invoice") {
 						return {
@@ -531,7 +532,7 @@ erpnext.accounts.BankReconciliationDataTableManager = class BankReconciliationDa
 			const payment_doctype = $(e.target).attr("data-doctype");
 			frappe.call({
 				method:
-					"erpnext.accounts.page.bank_reconciliation.bank_reconciliation.reconcile",
+					"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.reconcile",
 				args: {
 					bank_transaction: me.bank_entry,
 					payment_doctype: payment_doctype,
