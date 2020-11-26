@@ -57,12 +57,7 @@
 		"stock/dashboard/item_dashboard.js"
 	],
 	"js/bank-reconciliation-tool.min.js": [
-		"public/js/bank_reconciliation_tool/bank_reconciliation_controller.js",
-		"public/js/bank_reconciliation_tool/data_table_manager.js",
-		"public/js/bank_reconciliation_tool/import_preview_dialog.js",
-		"public/js/bank_reconciliation_tool/number_card.js",
-		"public/js/bank_reconciliation_tool/upload_statement.js",
-		"public/js/bank_reconciliation_tool/linked_payment_header.html",
-		"public/js/bank_reconciliation_tool/linked_payment_row.html"
+ 		"public/js/bank_reconciliation_tool/import_preview_dialog.js",
+		"public/js/bank_reconciliation_tool/upload_statement.js"
 	]
 }

@@ -13,29 +13,8 @@ erpnext.accounts.bankReconciliation = class BankReconciliation {
 		});
 		this.parent = wrapper;
 		this.page = this.parent.page;
-		const me =this;
 
-		frappe.require("assets/js/bank-reconciliation-tool.min.js", function () {
-			me.upload_statement_dialog_object = new erpnext.accounts.UploadStatememt();
-
-			me.upload_statement_button = me.page.set_secondary_action(
-				__("Upload a Statement"),
-				() => {
-					me.upload_statement_dialog_object.upload_statement_dialog.show();
-					if (
-						!me.upload_statement_dialog_object.upload_statement_dialog.get_value(
-							"data_import_id"
-						)
-					) {
-						me.upload_statement_dialog_object.upload_statement_dialog
-							.get_primary_btn()
-							.hide();
-					}
-				}
-			);
-		});
-
-
+		this.add_upload_statement_button()
 		this.check_plaid_status();
 		this.make();
 	}
@@ -89,6 +68,30 @@ erpnext.accounts.bankReconciliation = class BankReconciliation {
 				}
 			}
 		})
+	}
+
+	add_upload_statement_button(){
+		const me =this;
+		frappe.require("assets/js/bank-reconciliation-tool.min.js", function () {
+			me.upload_statement_dialog_object = new erpnext.accounts.UploadStatememt();
+
+			me.upload_statement_button = me.page.set_secondary_action(
+				__("Upload a Statement"),
+				() => {
+					me.upload_statement_dialog_object.upload_statement_dialog.show();
+					if (
+						!me.upload_statement_dialog_object.upload_statement_dialog.get_value(
+							"data_import_id"
+						)
+					) {
+						me.upload_statement_dialog_object.upload_statement_dialog
+							.get_primary_btn()
+							.hide();
+					}
+				}
+			);
+		});
+
 	}
 
 	check_plaid_status() {

@@ -503,3 +503,4 @@ def write_xlsx(data, sheet_name, wb=None, column_widths=None, file_path=None):
 
 	wb.save(file_path)
 	return True
+
