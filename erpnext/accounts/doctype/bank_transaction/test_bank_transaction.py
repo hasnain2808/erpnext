@@ -8,7 +8,7 @@ import unittest
 from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import create_sales_invoice
 from erpnext.accounts.doctype.purchase_invoice.test_purchase_invoice import make_purchase_invoice
 from erpnext.accounts.doctype.payment_entry.test_payment_entry import get_payment_entry
-from erpnext.accounts.page.bank_reconciliation.bank_reconciliation import reconcile, get_linked_payments
+from erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool import reconcile, get_linked_payments
 
 test_dependencies = ["Item", "Cost Center"]
 

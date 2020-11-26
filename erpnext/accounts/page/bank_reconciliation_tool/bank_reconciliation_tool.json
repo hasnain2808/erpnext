@@ -1,0 +1,19 @@
+{
+ "content": null,
+ "creation": "2020-10-29 15:30:25.420355",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2020-10-29 15:30:25.420355",
+ "modified_by": "Administrator",
+ "module": "Accounts",
+ "name": "bank-reconciliation-tool",
+ "owner": "Administrator",
+ "page_name": "Bank Reconciliation Tool",
+ "roles": [],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "Bank Reconciliation Tool"
+}
