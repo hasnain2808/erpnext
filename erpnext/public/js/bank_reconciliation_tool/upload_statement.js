@@ -16,21 +16,20 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 	}
 
 	get_upload_statement_dialog_fields() {
-		const me = this;
 		return [
 			{
 				fieldtype: "Link",
 				fieldname: "company",
 				label: __("Company"),
 				options: "Company",
-				change: () => me.upload_statement_dialog.refresh_dependency(),
+				change: () => this.upload_statement_dialog.refresh_dependency(),
 			},
 			{
 				fieldtype: "Attach",
 				fieldname: "bank_statement",
 				depends_on: "eval: doc.bank_account",
 				label: __("Attach Bank Statement"),
-				change: () => me.on_bank_statement_uploaded(),
+				change: () => this.on_bank_statement_uploaded(),
 			},
 			{
 				fieldtype: "Column Break",
@@ -41,8 +40,8 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 				label: __("Bank Account"),
 				options: "Bank Account",
 				depends_on: "eval: doc.company",
-				get_query: () => me.filter_by_company(),
-				change: () => me.on_bank_account_selected(),
+				get_query: () => this.filter_by_company(),
+				change: () => this.on_bank_account_selected(),
 			},
 			{
 				fieldtype: "Link",
@@ -149,56 +148,60 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 			import_file_path: values.bank_statement,
 			template_options: this.template_options,
 			bank_account: values.bank_account,
-			bank_name:values.bank
+			bank_name: values.bank,
 		};
 	}
 
 	show_bg_import_message(r) {
 		if (!r.message) return;
-		const message = __("The Bank Transactions will be Created in Background");
+		const message = __(
+			"The Bank Transactions will be Created in Background"
+		);
 		frappe.show_alert({ message: message, indicator: "green" }, 5);
 	}
 
 	show_preview() {
-		this.display_loading_message()
-		frappe
-			.call({
-				method:
-					"erpnext.accounts.page.bank_reconciliation.bank_reconciliation.get_importer_preview",
-				args: this.get_importer_preview_args(),
-				error: {TimestampMismatchError() {/* ignore this error*/}},
-				callback: (r) => {this.get_importer_preview_callback(r)}
-			})
+		this.display_loading_message();
+		frappe.call({
+			method:
+				"erpnext.accounts.page.bank_reconciliation.bank_reconciliation.get_importer_preview",
+			args: this.get_importer_preview_args(),
+			error: {
+				TimestampMismatchError() {
+					/* ignore this error*/
+				},
+			},
+			callback: (r) => this.get_importer_preview_callback(r),
+		});
 	}
 
-	display_loading_message(){
-		this.upload_statement_dialog.get_field("import_preview").$wrapper.empty();
+	display_loading_message() {
+		this.upload_statement_dialog
+			.get_field("import_preview")
+			.$wrapper.empty();
 		$('<span class="text-muted">')
 			.html(__("Loading import file..."))
 			.appendTo(
-				this.upload_statement_dialog.get_field("import_preview").$wrapper
+				this.upload_statement_dialog.get_field("import_preview")
+					.$wrapper
 			);
 	}
 
-	get_importer_preview_callback(r){
+	get_importer_preview_callback(r) {
 		let preview_data = r.message["preview"];
-		this.template_options = r.message["template_options"]
-		this.show_import_preview(
-			this.upload_statement_dialog,
-			preview_data
-		);
-		this.show_import_warnings(
-			this.upload_statement_dialog,
-			preview_data
-		);
+		this.template_options = r.message["template_options"];
+		this.show_import_preview(this.upload_statement_dialog, preview_data);
+		this.show_import_warnings(this.upload_statement_dialog, preview_data);
 	}
 
-	get_importer_preview_args(){
+	get_importer_preview_args() {
 		return {
-			import_file_path:  this.upload_statement_dialog.get_value("bank_statement"),
+			import_file_path: this.upload_statement_dialog.get_value(
+				"bank_statement"
+			),
 			template_options: this.template_options,
-			bank_name:this.upload_statement_dialog.get_value("bank")
-		}
+			bank_name: this.upload_statement_dialog.get_value("bank"),
+		};
 	}
 
 	show_import_preview(frm, preview_data) {
