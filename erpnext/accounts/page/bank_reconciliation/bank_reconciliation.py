@@ -1,14 +1,28 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2018, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
-
-from __future__ import unicode_literals
-import frappe
-from frappe import _
+import csv
+import json
+import re
 import difflib
+import openpyxl
+from openpyxl.styles import Font
+from openpyxl.utils import get_column_letter
+from six import string_types, iteritems
+
+import frappe
+from frappe.core.doctype.data_import.importer import Importer, ImportFile
+from frappe.model.document import Document
+from frappe import _
 from frappe.utils import flt
-from six import iteritems
+from frappe.utils.background_jobs import enqueue
+from frappe.core.page.background_jobs.background_jobs import get_info
+from frappe.utils.scheduler import is_scheduler_inactive
+from frappe.utils.xlsxutils import handle_html, ILLEGAL_CHARACTERS_RE
+
 from erpnext import get_company_currency
+
+
 
 @frappe.whitelist()
 def reconcile(bank_transaction, payment_doctype, payment_name):
@@ -367,3 +381,125 @@ def sales_invoices_query(doctype, txt, searchfield, start, page_len, filters):
 			'page_len': page_len
 		}
 	)
+
+
+@frappe.whitelist()
+def get_importer_preview(import_file_path, data_import=None, template_options=None):
+	data_import = frappe.get_doc(doctype="Data Import")
+	data_import.import_type = "Insert New Records"
+	data_import.reference_doctype = "Bank Transaction"
+	data_import.import_file = import_file_path
+	data_import.submit_after_import = 1
+	data_import.template_options = template_options
+	importer = Importer("Bank Transaction", data_import=data_import, file_path = import_file_path)
+	preview = importer.get_data_for_import_preview()
+	return {"preview":preview}
+
+
+@frappe.whitelist()
+def form_start_import(import_file_path, data_import=None, template_options=None, bank_account=None):
+
+	if is_scheduler_inactive() and not frappe.flags.in_test:
+		frappe.throw(
+			_("Scheduler is inactive. Cannot import data."), title=_("Scheduler Inactive")
+		)
+
+	enqueued_jobs = [d.get("job_name") for d in get_info()]
+	if "bank_statement_import" not in enqueued_jobs:
+		enqueue(
+			start_import,
+			queue="default",
+			timeout=6000,
+			event="data_import",
+			job_name="bank_statement_import",
+			import_file_path=import_file_path,
+			data_import=data_import,
+			template_options=template_options,
+			bank_account=bank_account,
+			now=frappe.conf.developer_mode or frappe.flags.in_test,
+		)
+		return True
+	return False
+
+
+def start_import(import_file_path, template_options=None, bank_account=None):
+	"""This method runs in background job"""
+	data_import = frappe.get_doc(doctype="Data Import")
+	data_import.import_type = "Insert New Records"
+	data_import.reference_doctype = "Bank Transaction"
+	data_import.import_file = import_file_path
+	data_import.submit_after_import = 1
+	data_import.template_options = template_options
+
+	import_file = ImportFile("Bank Transaction", file = import_file_path, import_type="Insert New Records")
+	data = import_file.raw_data
+
+	bank_account_loc = None
+
+	if "Bank Account" not in data[0]:
+		data[0].append("Bank Account")
+	else:
+		for loc, header in enumerate(data[0]):
+			if header == "Bank Account":
+				bank_account_loc = loc
+
+	for row in data[1:]:
+		if bank_account_loc:
+			row[bank_account_loc] = bank_account
+		else:
+			row.append(bank_account)
+
+	full_file_path = import_file.file_doc.get_full_path()
+	parts = import_file.file_doc.get_extension()
+	extension = parts[1]
+	extension = extension.lstrip(".")
+
+	if extension == "csv":
+		with open(full_file_path, 'w', newline='') as file:
+			writer = csv.writer(file)
+			writer.writerows(data)
+	elif extension == "xlsx" or "xls":
+		write_xlsx(data, "trans", file_path = full_file_path)
+
+	try:
+		i = Importer("Bank Transaction", data_import=data_import, file_path = import_file_path)
+		i.import_data()
+	except Exception:
+		frappe.db.rollback()
+		data_import.db_set("status", "Error")
+		frappe.log_error(title="data_import")
+	finally:
+		frappe.flags.in_import = False
+
+def write_xlsx(data, sheet_name, wb=None, column_widths=None, file_path=None):
+	column_widths = column_widths or []
+	if wb is None:
+		wb = openpyxl.Workbook(write_only=True)
+
+	ws = wb.create_sheet(sheet_name, 0)
+
+	for i, column_width in enumerate(column_widths):
+		if column_width:
+			ws.column_dimensions[get_column_letter(i + 1)].width = column_width
+
+	row1 = ws.row_dimensions[1]
+	row1.font = Font(name='Calibri', bold=True)
+
+	for row in data:
+		clean_row = []
+		for item in row:
+			if isinstance(item, string_types) and (sheet_name not in ['Data Import Template', 'Data Export']):
+				value = handle_html(item)
+			else:
+				value = item
+
+			if isinstance(item, string_types) and next(ILLEGAL_CHARACTERS_RE.finditer(value), None):
+				# Remove illegal characters from the string
+				value = re.sub(ILLEGAL_CHARACTERS_RE, '', value)
+
+			clean_row.append(value)
+
+		ws.append(clean_row)
+
+	wb.save(file_path)
+	return True

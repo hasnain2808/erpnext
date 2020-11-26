@@ -144,7 +144,7 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 		const me = this;
 		frappe.call({
 			method:
-				"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.form_start_import",
+				"erpnext.accounts.page.bank_reconciliation.bank_reconciliation.form_start_import",
 			args: me.get_import_args(values),
 			callback: (r) => me.show_bg_import_message(r),
 		});
@@ -176,7 +176,7 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 		frappe
 			.call({
 				method:
-					"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.get_importer_preview",
+					"erpnext.accounts.page.bank_reconciliation.bank_reconciliation.get_importer_preview",
 				args: {
 					import_file_path: file_name,
 					template_options: me.template_options,
