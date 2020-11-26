@@ -384,7 +384,22 @@ def sales_invoices_query(doctype, txt, searchfield, start, page_len, filters):
 
 
 @frappe.whitelist()
-def get_importer_preview(import_file_path, data_import=None, template_options=None):
+def get_importer_preview(import_file_path, bank_name, template_options=None):
+	print("template_options", template_options)
+	print(type(template_options))
+	if not template_options or  template_options == '{}':
+		template_options_dict = {}
+		column_to_field_map = {}
+		bank = frappe.get_doc("Bank", bank_name)
+		for i in bank.bank_transaction_mapping:
+			column_to_field_map[i.file_field] = i.bank_transaction_field
+			# print("i",i.bank_transaction_field)
+			# print("i",i.file_field)
+		template_options_dict["column_to_field_map"] = column_to_field_map
+		print(template_options_dict)
+		template_options = json.dumps(template_options_dict)
+		print(template_options)
+
 	data_import = frappe.get_doc(doctype="Data Import")
 	data_import.import_type = "Insert New Records"
 	data_import.reference_doctype = "Bank Transaction"
@@ -393,12 +408,21 @@ def get_importer_preview(import_file_path, data_import=None, template_options=No
 	data_import.template_options = template_options
 	importer = Importer("Bank Transaction", data_import=data_import, file_path = import_file_path)
 	preview = importer.get_data_for_import_preview()
-	return {"preview":preview}
+	return {"preview":preview, "template_options": template_options}
 
 
 @frappe.whitelist()
-def form_start_import(import_file_path, data_import=None, template_options=None, bank_account=None):
+def form_start_import(import_file_path, bank_name=None, template_options=None, bank_account=None):
 
+	print(template_options)
+	bank = frappe.get_doc("Bank", bank_name)
+	for d in bank.bank_transaction_mapping:
+		d.delete()
+	print("to",template_options)
+	print("to2",json.loads(template_options))
+	for d in json.loads(template_options)["column_to_field_map"].items():
+		bank.append("bank_transaction_mapping", {"bank_transaction_field":  d[1] ,"file_field": d[0]} )
+	bank.save()
 	if is_scheduler_inactive() and not frappe.flags.in_test:
 		frappe.throw(
 			_("Scheduler is inactive. Cannot import data."), title=_("Scheduler Inactive")
@@ -413,7 +437,6 @@ def form_start_import(import_file_path, data_import=None, template_options=None,
 			event="data_import",
 			job_name="bank_statement_import",
 			import_file_path=import_file_path,
-			data_import=data_import,
 			template_options=template_options,
 			bank_account=bank_account,
 			now=frappe.conf.developer_mode or frappe.flags.in_test,

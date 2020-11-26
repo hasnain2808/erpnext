@@ -6,13 +6,12 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 	}
 
 	make_upload_statement_dialog() {
-		const me = this;
-		me.upload_statement_dialog = new frappe.ui.Dialog({
-			title: __("Upload Bank Statements"),
-			fields: me.get_upload_statement_dialog_fields(),
+		this.upload_statement_dialog = new frappe.ui.Dialog({
+			title: __("Upload Bank Statement"),
+			fields: this.get_upload_statement_dialog_fields(),
 			size: "large",
 			primary_action: (values) =>
-				me.upload_statement_dialog_primary_action(values),
+				this.upload_statement_dialog_primary_action(values),
 		});
 	}
 
@@ -88,65 +87,60 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 	}
 
 	filter_by_company() {
-		const me = this
 		return {
 			filters: {
 				company: [
 					"in",
-					[me.upload_statement_dialog.get_value("company") || ""],
+					[this.upload_statement_dialog.get_value("company") || ""],
 				],
 			},
 		};
 	}
 
 	on_bank_statement_uploaded() {
-		const me = this;
-		if (me.upload_statement_dialog.get_value("bank_statement"))
-			me.show_preview();
-		me.upload_statement_dialog.refresh_dependency();
+		if (this.upload_statement_dialog.get_value("bank_statement"))
+			this.show_preview();
+		this.upload_statement_dialog.refresh_dependency();
 	}
 
 	on_bank_account_selected() {
-		const me = this;
-		me.upload_statement_dialog.refresh_dependency();
+		this.upload_statement_dialog.refresh_dependency();
 		frappe.call({
 			method: "frappe.client.get_value",
 			args: {
 				doctype: "Bank Account",
-				filters: me.get_bank_account_filters(),
+				filters: this.get_bank_account_filters(),
 				fieldname: ["bank"],
 			},
-			callback: (r) => me.set_bank(r.message),
+			callback: (r) => this.set_bank(r.message),
 		});
 	}
 
 	get_bank_account_filters() {
-		const me = this;
-		return { name: me.upload_statement_dialog.get_value("bank_account") };
+		return { name: this.upload_statement_dialog.get_value("bank_account") };
 	}
 
 	set_bank(message) {
-		const me = this
-		me.upload_statement_dialog.set_value("bank", message["bank"]);
+		this.upload_statement_dialog.set_value("bank", message["bank"]);
 	}
 
 	upload_statement_dialog_primary_action(values) {
-		const me = this;
 		if (!values.bank_statement) return;
-		me.start_import(values);
-		me.upload_statement_dialog.hide();
-		me.template_options = "{}";
-		delete me.upload_statement_dialog;
-		me.make_upload_statement_dialog();
+		this.start_import(values);
+		this.upload_statement_dialog.hide();
+		this.template_options = "{}";
+		delete this.upload_statement_dialog;
+		this.make_upload_statement_dialog();
 	}
 
 	start_import(values) {
-		const me = this;
 		frappe.call({
 			method:
 				"erpnext.accounts.page.bank_reconciliation.bank_reconciliation.form_start_import",
-			args: me.get_import_args(values),
-			callback: (r) => me.show_bg_import_message(r),
+			args: this.get_import_args(values),
+			freeze: true,
+			freeze_message: __("Please wait..."),
+			callback: (r) => this.show_bg_import_message(r),
 		});
 	}
 
@@ -155,55 +149,62 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 			import_file_path: values.bank_statement,
 			template_options: this.template_options,
 			bank_account: values.bank_account,
+			bank_name:values.bank
 		};
 	}
+
 	show_bg_import_message(r) {
 		if (!r.message) return;
-		const message = __("The Transactions will be imported in background");
+		const message = __("The Bank Transactions will be Created in Background");
 		frappe.show_alert({ message: message, indicator: "green" }, 5);
 	}
+
 	show_preview() {
-		const me = this;
-		const file_name = me.upload_statement_dialog.get_value(
-			"bank_statement"
-		);
-		me.upload_statement_dialog.get_field("import_preview").$wrapper.empty();
-		$('<span class="text-muted">')
-			.html(__("Loading import file..."))
-			.appendTo(
-				me.upload_statement_dialog.get_field("import_preview").$wrapper
-			);
+		this.display_loading_message()
 		frappe
 			.call({
 				method:
 					"erpnext.accounts.page.bank_reconciliation.bank_reconciliation.get_importer_preview",
-				args: {
-					import_file_path: file_name,
-					template_options: me.template_options,
-				},
-				error: {
-					TimestampMismatchError() {
-						// ignore this error
-					},
-				},
+				args: this.get_importer_preview_args(),
+				error: {TimestampMismatchError() {/* ignore this error*/}},
+				callback: (r) => {this.get_importer_preview_callback(r)}
 			})
-			.then((r) => {
-				let preview_data = r.message["preview"];
-				me.show_import_preview(
-					me.upload_statement_dialog,
-					preview_data
-				);
-				me.show_import_warnings(
-					me.upload_statement_dialog,
-					preview_data
-				);
-			});
+	}
+
+	display_loading_message(){
+		this.upload_statement_dialog.get_field("import_preview").$wrapper.empty();
+		$('<span class="text-muted">')
+			.html(__("Loading import file..."))
+			.appendTo(
+				this.upload_statement_dialog.get_field("import_preview").$wrapper
+			);
+	}
+
+	get_importer_preview_callback(r){
+		let preview_data = r.message["preview"];
+		this.template_options = r.message["template_options"]
+		this.show_import_preview(
+			this.upload_statement_dialog,
+			preview_data
+		);
+		this.show_import_warnings(
+			this.upload_statement_dialog,
+			preview_data
+		);
+	}
+
+	get_importer_preview_args(){
+		return {
+			import_file_path:  this.upload_statement_dialog.get_value("bank_statement"),
+			template_options: this.template_options,
+			bank_name:this.upload_statement_dialog.get_value("bank")
+		}
 	}
 
 	show_import_preview(frm, preview_data) {
 		const me = this;
 		let import_log = JSON.parse(frm.get_value("import_log") || "[]");
-		me.upload_statement_dialog.get_primary_btn().show();
+		this.upload_statement_dialog.get_primary_btn().show();
 
 		if (
 			frm.import_preview &&
