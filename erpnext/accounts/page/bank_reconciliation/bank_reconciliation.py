@@ -414,15 +414,13 @@ def get_importer_preview(import_file_path, bank_name, template_options=None):
 @frappe.whitelist()
 def form_start_import(import_file_path, bank_name=None, template_options=None, bank_account=None):
 
-	print(template_options)
 	bank = frappe.get_doc("Bank", bank_name)
 	for d in bank.bank_transaction_mapping:
 		d.delete()
-	print("to",template_options)
-	print("to2",json.loads(template_options))
 	for d in json.loads(template_options)["column_to_field_map"].items():
 		bank.append("bank_transaction_mapping", {"bank_transaction_field":  d[1] ,"file_field": d[0]} )
 	bank.save()
+
 	if is_scheduler_inactive() and not frappe.flags.in_test:
 		frappe.throw(
 			_("Scheduler is inactive. Cannot import data."), title=_("Scheduler Inactive")

@@ -22,6 +22,7 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 				fieldname: "company",
 				label: __("Company"),
 				options: "Company",
+				reqd:1,
 				change: () => this.upload_statement_dialog.refresh_dependency(),
 			},
 			{
@@ -29,6 +30,7 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 				fieldname: "bank_statement",
 				depends_on: "eval: doc.bank_account",
 				label: __("Attach Bank Statement"),
+				reqd:1,
 				change: () => this.on_bank_statement_uploaded(),
 			},
 			{
@@ -40,6 +42,7 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 				label: __("Bank Account"),
 				options: "Bank Account",
 				depends_on: "eval: doc.company",
+				reqd:1,
 				get_query: () => this.filter_by_company(),
 				change: () => this.on_bank_account_selected(),
 			},
@@ -138,7 +141,6 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 				"erpnext.accounts.page.bank_reconciliation.bank_reconciliation.form_start_import",
 			args: this.get_import_args(values),
 			freeze: true,
-			freeze_message: __("Please wait..."),
 			callback: (r) => this.show_bg_import_message(r),
 		});
 	}
@@ -207,7 +209,7 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 	show_import_preview(frm, preview_data) {
 		const me = this;
 		let import_log = JSON.parse(frm.get_value("import_log") || "[]");
-		this.upload_statement_dialog.get_primary_btn().show();
+		// this.upload_statement_dialog.get_primary_btn().show();
 
 		if (
 			frm.import_preview &&
