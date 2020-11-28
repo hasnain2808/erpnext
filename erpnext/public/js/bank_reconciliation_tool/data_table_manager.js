@@ -176,6 +176,7 @@ erpnext.accounts.BankReconciliationDataTableManager = class BankReconciliationDa
 				"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.get_linked_payments",
 			args: {
 				bank_transaction: data,
+				async:false,
 				freeze: true,
 				freeze_message: __("Finding linked payments"),
 			},
@@ -187,6 +188,7 @@ erpnext.accounts.BankReconciliationDataTableManager = class BankReconciliationDa
 	}
 
 	make_dialog(data) {
+		data = data.message
 		const me = this;
 		me.selected_payment = null;
 
