@@ -139,16 +139,20 @@ erpnext.accounts.BankReconciliationDataTableManager = class BankReconciliationDa
 	}
 
 	set_listeners() {
-		const me = this;
 		console.log("listener set");
+		var me = this
 		$(`.dt-scrollable`).on("click", `.close`, function () {
 			console.log("inside listener");
 			// me.bank_entry = $(this).attr("data-name");
-			me.dialog_manager.show_dialog($(this).attr("data-name"));
+			me.dialog_manager.show_dialog($(this).attr("data-name"),
+			() => me.update_dt_cards()
+			);
 			return true;
 		});
 	}
+
 	update_dt_cards(result) {
+		const me = this
 		me.make_dt();
 		me.get_cleared_balance().then(() => {
 			me.cards_manager.$cards[1].set_value(
