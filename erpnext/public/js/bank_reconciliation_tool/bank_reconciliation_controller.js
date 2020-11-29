@@ -47,6 +47,8 @@ erpnext.accounts.BankReconciliationController = class BankReconciliationControll
 					options: "Company",
 					default: "Moha",
 					change: () => {
+						console.log(me.form.get_value("company"))
+						me.company = me.form.get_value("company") || ""
 						this.make_reconciliation_tool();
 					},
 				},
@@ -259,7 +261,9 @@ erpnext.accounts.BankReconciliationController = class BankReconciliationControll
 	render() {
 		const me = this;
 		if (me.bank_account) {
+			console.log(me.company)
 			this.bank_reconciliation_data_table_manager = new erpnext.accounts.BankReconciliationDataTableManager(
+				me.company,
 				me.bank_account,
 				me.$reconciliation_tool_dt,
 				me.bank_statement_from_date,
