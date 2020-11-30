@@ -135,14 +135,13 @@ erpnext.accounts.BankReconciliationDataTableManager = class BankReconciliationDa
 	}
 
 	set_datatable_style() {
-		$(`.dt-scrollable`).css("max-height", "calc(100vh - 400px)");
+		$(`.${this.datatable.style.scopeClass} .dt-scrollable`).css("max-height", "calc(100vh - 400px)");
 	}
 
 	set_listeners() {
 		console.log("listener set");
 		var me = this
-		$(`.dt-scrollable`).on("click", `.close`, function () {
-			console.log("inside listener");
+		$(`.${this.datatable.style.scopeClass} .dt-scrollable`).on("click", `.close`, function () {
 			// me.bank_entry = $(this).attr("data-name");
 			me.dialog_manager.show_dialog($(this).attr("data-name"),
 			() => me.update_dt_cards()
