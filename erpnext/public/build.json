@@ -62,6 +62,7 @@
 		"public/js/bank_reconciliation_tool/import_preview_dialog.js",
 		"public/js/bank_reconciliation_tool/number_card.js",
 		"public/js/bank_reconciliation_tool/upload_statement.js",
+		"public/js/bank_reconciliation_tool/bank_reconciliation_dialog_manager.js",
 		"public/js/bank_reconciliation_tool/linked_payment_header.html",
 		"public/js/bank_reconciliation_tool/linked_payment_row.html"
 	]

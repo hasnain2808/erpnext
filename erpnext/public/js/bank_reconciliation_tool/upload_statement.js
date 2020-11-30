@@ -138,7 +138,7 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 	start_import(values) {
 		frappe.call({
 			method:
-				"erpnext.accounts.page.bank_reconciliation.bank_reconciliation.form_start_import",
+				"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.form_start_import",
 			args: this.get_import_args(values),
 			freeze: true,
 			callback: (r) => this.show_bg_import_message(r),
@@ -166,7 +166,7 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 		this.display_loading_message();
 		frappe.call({
 			method:
-				"erpnext.accounts.page.bank_reconciliation.bank_reconciliation.get_importer_preview",
+				"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.get_importer_preview",
 			args: this.get_importer_preview_args(),
 			error: {
 				TimestampMismatchError() {
