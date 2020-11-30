@@ -240,7 +240,7 @@ def create_payment_entry_bts(
 		cost_center
 	):
 	bank_transaction = frappe.get_doc("Bank Transaction", bank_transaction)
-	paid_amount = bank_transaction.credit if bank_transaction.credit > 0 else bank_transaction.debit
+	paid_amount = bank_transaction.unallocated_amount
 	payment_type = "Receive" if bank_transaction.credit > 0 else "Pay"
 	party_type = "Customer" if bank_transaction.credit > 0 else "Supplier"
 
@@ -332,7 +332,7 @@ def get_linked_payments(bank_transaction):
 
 def check_matching_amount(bank_account, company, transaction):
 	payments = []
-	amount = transaction.credit if transaction.credit > 0 else transaction.debit
+	amount = transaction.unallocated_amount #transaction.credit if transaction.credit > 0 else transaction.debit
 
 	payment_type = "Receive" if transaction.credit > 0 else "Pay"
 	account_from_to = "paid_to" if transaction.credit > 0 else "paid_from"
