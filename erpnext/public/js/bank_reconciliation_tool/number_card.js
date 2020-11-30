@@ -1,4 +1,3 @@
-
 frappe.provide("erpnext.accounts");
 
 erpnext.accounts.BankReconciliationNumberCardManager = class BankReconciliationNumberCardManager {
@@ -8,7 +7,6 @@ erpnext.accounts.BankReconciliationNumberCardManager = class BankReconciliationN
 		cleared_balance,
 		currency
 	) {
-		// this.data = data
 		this.$reconciliation_tool_cards = $reconciliation_tool_cards;
 		this.bank_statement_closing_balance = bank_statement_closing_balance;
 		this.cleared_balance = cleared_balance;
@@ -48,17 +46,11 @@ erpnext.accounts.BankReconciliationNumberCardManager = class BankReconciliationN
 		];
 
 		chart_data.forEach((summary) => {
-			// frappe.widget.utils
-			// 	.build_summary_item(summary)
-
 			let number_card = new erpnext.accounts.NumberCard(summary);
 			this.$cards.push(number_card);
 
 			number_card.$card.appendTo(this.$summary);
 		});
-		console.log(this.$cards);
-		// this.$cards[0].set_value(40)
-		// this.$cards[2].set_indicator('green')
 		this.$summary.css("border-bottom", "0px");
 		this.$summary.show();
 	}

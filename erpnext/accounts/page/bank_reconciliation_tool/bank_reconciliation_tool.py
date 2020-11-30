@@ -40,22 +40,16 @@ def get_bank_transactions(bank_account, from_date = None, to_date = None):
 		'reference_number', 'transaction_id', 'party_type', 'party'],
 		filters = filters
 	)
-	print(len(transactions))
 	return transactions
 
 @frappe.whitelist()
 def get_account_balance(bank_account, till_date):
 	account = frappe.db.get_value('Bank Account', bank_account, 'account')
-	print(account)
-	# balance_as_per_system = get_balance_on(account, till_date)
-	# print(balance_as_per_system)
-	# return balance_as_per_system
 	filters = frappe._dict({
 		"account": account,
 		"report_date": till_date,
 		"include_pos_transactions": 1
 	})
-	print(type(filters))
 	data = get_entries(filters)
 
 	balance_as_per_system = get_balance_on(filters["account"], filters["report_date"])
@@ -74,20 +68,14 @@ def get_account_balance(bank_account, till_date):
 
 @frappe.whitelist()
 def get_importer_preview(import_file_path, bank_name, template_options=None):
-	print("template_options", template_options)
-	print(type(template_options))
 	if not template_options or  template_options == '{}':
 		template_options_dict = {}
 		column_to_field_map = {}
 		bank = frappe.get_doc("Bank", bank_name)
 		for i in bank.bank_transaction_mapping:
 			column_to_field_map[i.file_field] = i.bank_transaction_field
-			# print("i",i.bank_transaction_field)
-			# print("i",i.file_field)
 		template_options_dict["column_to_field_map"] = column_to_field_map
-		print(template_options_dict)
 		template_options = json.dumps(template_options_dict)
-		print(template_options)
 
 	data_import = frappe.get_doc(doctype="Data Import")
 	data_import.import_type = "Insert New Records"
@@ -227,18 +215,7 @@ def update_bank_transaction(bank_transaction, transaction_id, reference_number, 
 	frappe.db.set_value("Bank Transaction", bank_transaction, updates)
 
 @frappe.whitelist()
-def create_payment_entry_bts(
-		bank_transaction,
-		transaction_id,
-		reference_number,
-		reference_date,
-		party_type,
-		party,
-		posting_date,
-		mode_of_payment,
-		project,
-		cost_center
-	):
+def create_payment_entry_bts( bank_transaction, transaction_id, reference_number, reference_date, party_type, party, posting_date, mode_of_payment, project, cost_center):
 	bank_transaction = frappe.get_doc("Bank Transaction", bank_transaction)
 	paid_amount = bank_transaction.unallocated_amount
 	payment_type = "Receive" if bank_transaction.credit > 0 else "Pay"
@@ -271,6 +248,7 @@ def create_payment_entry_bts(
 
 @frappe.whitelist()
 def reconcile(bank_transaction, payment_doctype, payment_name):
+	# from old bank reconciliation
 	transaction = frappe.get_doc("Bank Transaction", bank_transaction)
 	payment_entry = frappe.get_doc(payment_doctype, payment_name)
 
@@ -294,6 +272,7 @@ def reconcile(bank_transaction, payment_doctype, payment_name):
 	return 'reconciled'
 
 def add_payment_to_transaction(transaction, payment_entry, gl_entry):
+	# from old bank reconciliation
 	gl_amount, transaction_amount = (gl_entry.credit, transaction.debit) if gl_entry.credit > 0 else (gl_entry.debit, transaction.credit)
 	allocated_amount = gl_amount if gl_amount <= transaction_amount else transaction_amount
 	transaction.append("payment_entries", {
@@ -301,13 +280,13 @@ def add_payment_to_transaction(transaction, payment_entry, gl_entry):
 		"payment_entry": payment_entry.name,
 		"allocated_amount": allocated_amount
 	})
-
 	transaction.save()
 	transaction.update_allocations()
 
 
 @frappe.whitelist()
 def get_linked_payments(bank_transaction):
+	# from old bank reconciliation
 	transaction = frappe.get_doc("Bank Transaction", bank_transaction)
 	bank_account = frappe.db.get_values("Bank Account", transaction.bank_account, ["account", "company"], as_dict=True)
 
@@ -331,6 +310,7 @@ def get_linked_payments(bank_transaction):
 		return []
 
 def check_matching_amount(bank_account, company, transaction):
+	# from old bank reconciliation
 	payments = []
 	amount = transaction.unallocated_amount #transaction.credit if transaction.credit > 0 else transaction.debit
 
@@ -428,6 +408,7 @@ def check_matching_amount(bank_account, company, transaction):
 	return payments
 
 def get_matching_descriptions_data(company, transaction):
+	# from old bank reconciliation
 	if not transaction.description :
 		return []
 
@@ -489,8 +470,8 @@ def get_matching_descriptions_data(company, transaction):
 	return data
 
 def check_amount_vs_description(amount_matching, description_matching):
+	# from old bank reconciliation
 	result = []
-
 	if description_matching:
 		for am_match in amount_matching:
 			for des_match in description_matching:
@@ -515,6 +496,7 @@ def check_amount_vs_description(amount_matching, description_matching):
 		return sorted(amount_matching, key = lambda x: x["posting_date"], reverse=True)
 
 def get_matching_transactions_payments(description_matching):
+	# from old bank reconciliation
 	payments = [x["payment_entry"] for x in description_matching]
 
 	payment_by_ratio = {x["payment_entry"]: x["ratio"] for x in description_matching}
@@ -531,6 +513,7 @@ def get_matching_transactions_payments(description_matching):
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def payment_entry_query(doctype, txt, searchfield, start, page_len, filters):
+	# from old bank reconciliation
 	account = frappe.db.get_value("Bank Account", filters.get("bank_account"), "account")
 	if not account:
 		return
@@ -561,6 +544,7 @@ def payment_entry_query(doctype, txt, searchfield, start, page_len, filters):
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def journal_entry_query(doctype, txt, searchfield, start, page_len, filters):
+	# from old bank reconciliation
 	account = frappe.db.get_value("Bank Account", filters.get("bank_account"), "account")
 
 	return frappe.db.sql("""
@@ -598,6 +582,7 @@ def journal_entry_query(doctype, txt, searchfield, start, page_len, filters):
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def sales_invoices_query(doctype, txt, searchfield, start, page_len, filters):
+	# from old bank reconciliation
 	return frappe.db.sql("""
 		SELECT
 			sip.parent, si.customer, sip.amount, sip.mode_of_payment

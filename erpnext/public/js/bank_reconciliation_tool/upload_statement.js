@@ -209,8 +209,6 @@ erpnext.accounts.UploadStatememt = class UploadStatememt {
 	show_import_preview(frm, preview_data) {
 		const me = this;
 		let import_log = JSON.parse(frm.get_value("import_log") || "[]");
-		// this.upload_statement_dialog.get_primary_btn().show();
-
 		if (
 			frm.import_preview &&
 			frm.import_preview.doctype === frm.get_value("reference_doctype")

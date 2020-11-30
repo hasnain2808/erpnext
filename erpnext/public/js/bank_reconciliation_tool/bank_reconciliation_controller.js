@@ -178,20 +178,19 @@ erpnext.accounts.BankReconciliationController = class BankReconciliationControll
 	}
 
 	make_reconciliation_tool() {
-		const me = this;
-		me.$reconciliation_tool_cards.empty();
+		this.$reconciliation_tool_cards.empty();
 		if (this.bank_account && this.bank_statement_to_date) {
-			me.get_cleared_balance().then(() => {
+			this.get_cleared_balance().then(() => {
 				if (
 					this.bank_account &&
 					this.bank_statement_from_date &&
 					this.bank_statement_to_date &&
 					this.bank_statement_closing_balance
 				) {
-					me.render_chart();
-					me.render();
+					this.render_chart();
+					this.render();
 					frappe.utils.scroll_to(
-						me.$reconciliation_tool_cards,
+						this.$reconciliation_tool_cards,
 						true,
 						30
 					);
@@ -201,20 +200,19 @@ erpnext.accounts.BankReconciliationController = class BankReconciliationControll
 	}
 
 	get_account_opening_balance() {
-		const me = this;
 		if (this.bank_account && this.bank_statement_from_date) {
 			frappe.call({
 				method:
 					"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.get_account_balance",
 				args: {
 					bank_account: this.bank_account,
-					till_date: me.bank_statement_from_date,
+					till_date: this.bank_statement_from_date,
 				},
 				callback(response) {
-					me.account_opening_balance = response.message;
-					me.form.set_value(
+					this.account_opening_balance = response.message;
+					this.form.set_value(
 						"account_opening_balance",
-						me.account_opening_balance
+						this.account_opening_balance
 					);
 				},
 			});
@@ -222,44 +220,41 @@ erpnext.accounts.BankReconciliationController = class BankReconciliationControll
 	}
 
 	get_cleared_balance() {
-		const me = this;
 		if (this.bank_account && this.bank_statement_to_date) {
 			return frappe.call({
 				method:
 					"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.get_account_balance",
 				args: {
 					bank_account: this.bank_account,
-					till_date: me.bank_statement_to_date,
+					till_date: this.bank_statement_to_date,
 				},
 				callback(response) {
-					me.cleared_balance = response.message;
+					this.cleared_balance = response.message;
 				},
 			});
 		}
 	}
 
 	render_chart() {
-		const me = this;
-		me.cards_manager = new erpnext.accounts.BankReconciliationNumberCardManager(
-			me.$reconciliation_tool_cards,
-			me.bank_statement_closing_balance,
-			me.cleared_balance,
-			me.currency
+		this.cards_manager = new erpnext.accounts.BankReconciliationNumberCardManager(
+			this.$reconciliation_tool_cards,
+			this.bank_statement_closing_balance,
+			this.cleared_balance,
+			this.currency
 		);
 	}
 
 	render() {
-		const me = this;
-		if (me.bank_account) {
-			console.log(me.company);
+		if (this.bank_account) {
+			console.log(this.company);
 			this.bank_reconciliation_data_table_manager = new erpnext.accounts.BankReconciliationDataTableManager(
-				me.company,
-				me.bank_account,
-				me.$reconciliation_tool_dt,
-				me.bank_statement_from_date,
-				me.bank_statement_to_date,
-				me.bank_statement_closing_balance,
-				me.cards_manager
+				this.company,
+				this.bank_account,
+				this.$reconciliation_tool_dt,
+				this.bank_statement_from_date,
+				this.bank_statement_to_date,
+				this.bank_statement_closing_balance,
+				this.cards_manager
 			);
 		}
 	}

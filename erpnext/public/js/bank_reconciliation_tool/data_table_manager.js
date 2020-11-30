@@ -10,7 +10,6 @@ erpnext.accounts.BankReconciliationDataTableManager = class BankReconciliationDa
 		bank_statement_closing_balance,
 		cards_manager
 	) {
-		// this.data = data
 		this.bank_account = bank_account;
 		this.company = company;
 		this.$reconciliation_tool_dt = $reconciliation_tool_dt;
@@ -112,10 +111,10 @@ erpnext.accounts.BankReconciliationDataTableManager = class BankReconciliationDa
 	}
 
 	get_dt_options() {
-		const me = this;
-		me.datatable_options = {
-			columns: me.columns,
-			data: me.transactions,
+		const this = this;
+		this.datatable_options = {
+			columns: this.columns,
+			data: this.transactions,
 			dynamicRowHeight: true,
 			checkboxColumn: false,
 			inlineFilters: true,
@@ -123,35 +122,40 @@ erpnext.accounts.BankReconciliationDataTableManager = class BankReconciliationDa
 	}
 
 	get_datatable() {
-		const me = this;
-		if (!me.datatable) {
-			me.datatable = new frappe.DataTable(
-				me.$reconciliation_tool_dt.get(0),
-				me.datatable_options
+		if (!this.datatable) {
+			this.datatable = new frappe.DataTable(
+				this.$reconciliation_tool_dt.get(0),
+				this.datatable_options
 			);
 		} else {
-			me.datatable.refresh(me.transactions, me.columns);
+			this.datatable.refresh(this.transactions, this.columns);
 		}
 	}
 
 	set_datatable_style() {
-		$(`.${this.datatable.style.scopeClass} .dt-scrollable`).css("max-height", "calc(100vh - 400px)");
+		$(`.${this.datatable.style.scopeClass} .dt-scrollable`).css(
+			"max-height",
+			"calc(100vh - 400px)"
+		);
 	}
 
 	set_listeners() {
 		console.log("listener set");
-		var me = this
-		$(`.${this.datatable.style.scopeClass} .dt-scrollable`).on("click", `.close`, function () {
-			// me.bank_entry = $(this).attr("data-name");
-			me.dialog_manager.show_dialog($(this).attr("data-name"),
-			() => me.update_dt_cards()
-			);
-			return true;
-		});
+		var me = this;
+		$(`.${this.datatable.style.scopeClass} .dt-scrollable`).on(
+			"click",
+			`.close`,
+			function () {
+				me.dialog_manager.show_dialog($(this).attr("data-name"), () =>
+					me.update_dt_cards()
+				);
+				return true;
+			}
+		);
 	}
 
 	update_dt_cards(result) {
-		const me = this
+		const me = this;
 		me.make_dt();
 		me.get_cleared_balance().then(() => {
 			me.cards_manager.$cards[1].set_value(
@@ -172,8 +176,6 @@ erpnext.accounts.BankReconciliationDataTableManager = class BankReconciliationDa
 		});
 	}
 
-
-
 	get_cleared_balance() {
 		const me = this;
 		if (this.bank_account && this.bank_statement_to_date) {
@@ -191,4 +193,3 @@ erpnext.accounts.BankReconciliationDataTableManager = class BankReconciliationDa
 		}
 	}
 };
-
