@@ -28,6 +28,8 @@ erpnext.accounts.BankReconciliationDialogManager = class BankReconciliationDialo
 					"transaction_id",
 					"party_type",
 					"party",
+					"unallocated_amount",
+					"allocated_amount",
 				],
 			},
 			callback: (r) => {
@@ -259,20 +261,6 @@ erpnext.accounts.BankReconciliationDialogManager = class BankReconciliationDialo
 
 			{
 				fieldtype: "Section Break",
-				fieldname: "description_section",
-				label: "Description",
-				collapsible: 1,
-				depends_on: "eval:doc.action!='Match Payment Entry'",
-			},
-
-			{
-				fieldname: "description",
-				fieldtype: "Small Text",
-				read_only: 1,
-				// default: me.data.description || 0,
-			},
-			{
-				fieldtype: "Section Break",
 				fieldname: "references_party",
 				label: "References and Party Details",
 				depends_on: "eval:doc.action!='Match Payment Entry'",
@@ -303,6 +291,7 @@ erpnext.accounts.BankReconciliationDialogManager = class BankReconciliationDialo
 				fieldname: "reference_date",
 				fieldtype: "Date",
 				label: "Cheque/Reference Date",
+				mandatory_depends_on: "eval:doc.action=='Add Payment Entry'",
 				depends_on: "eval:doc.action=='Add Payment Entry'",
 				reqd: 1,
 			},
@@ -351,73 +340,115 @@ erpnext.accounts.BankReconciliationDialogManager = class BankReconciliationDialo
 				depends_on: "eval:doc.action=='Add Payment Entry'",
 			},
 
-			{
-				fieldname: "update_transaction_button",
-				fieldtype: "Button",
-				label: "Update Bank Transaction",
-				depends_on: "eval:doc.action=='Update Bank Transaction'",
-				primary: 1,
-				click: () => {
-					const me = this;
+			// {
+			// 	fieldname: "update_transaction_button",
+			// 	fieldtype: "Button",
+			// 	label: "Update Bank Transaction",
+			// 	depends_on: "eval:doc.action=='Update Bank Transaction'",
+			// 	primary: 1,
+			// 	click: () => {
+			// 		const me = this;
 
-					frappe.call({
-						method:
-							"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.update_bank_transaction",
-						args: {
-							bank_transaction: me.bank_transaction.name,
-							transaction_id: me.dialog.get_value(
-								"transaction_id"
-							),
-							reference_number: me.dialog.get_value(
-								"reference_number"
-							),
-							party_type: me.dialog.get_value("party_type"),
-							party: me.dialog.get_value("party"),
-						},
-						callback(response) {
-							me.update_dt_cards();
-							me.dialog.hide();
-						},
-					});
-				},
+			// 		frappe.call({
+			// 			method:
+			// 				"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.update_bank_transaction",
+			// 			args: {
+			// 				bank_transaction: me.bank_transaction.name,
+			// 				transaction_id: me.dialog.get_value(
+			// 					"transaction_id"
+			// 				),
+			// 				reference_number: me.dialog.get_value(
+			// 					"reference_number"
+			// 				),
+			// 				party_type: me.dialog.get_value("party_type"),
+			// 				party: me.dialog.get_value("party"),
+			// 			},
+			// 			callback(response) {
+			// 				me.update_dt_cards();
+			// 				me.dialog.hide();
+			// 			},
+			// 		});
+			// 	},
+			// },
+
+			// {
+			// 	fieldname: "create_new_payment",
+			// 	fieldtype: "Button",
+			// 	label: "Add Payment Entry",
+			// 	primary: 1,
+			// 	depends_on: "eval:doc.action=='Add Payment Entry'",
+			// 	click: () => {
+			// 		frappe.call({
+			// 			method:
+			// 				"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.create_payment_entry_bts",
+			// 			args: {
+			// 				bank_transaction: me.bank_transaction.name,
+			// 				transaction_id: me.dialog.get_value(
+			// 					"transaction_id"
+			// 				),
+			// 				reference_number: me.dialog.get_value(
+			// 					"reference_number"
+			// 				),
+			// 				reference_date: me.dialog.get_value(
+			// 					"reference_date"
+			// 				),
+			// 				party_type: me.dialog.get_value("party_type"),
+			// 				party: me.dialog.get_value("party"),
+			// 				posting_date: me.dialog.get_value("posting_date"),
+			// 				mode_of_payment: me.dialog.get_value(
+			// 					"mode_of_payment"
+			// 				),
+			// 				project: me.dialog.get_value("project"),
+			// 				cost_center: me.dialog.get_value("cost_center"),
+			// 			},
+			// 			callback(response) {
+			// 				me.update_dt_cards();
+			// 				me.dialog.hide();
+			// 			},
+			// 		});
+			// 	},
+			// },
+			{
+				fieldtype: "Section Break",
+				fieldname: "details_section",
+				label: "Transaction Details",
+				collapsible: 1,
+				// depends_on: "eval:doc.action!='Match Payment Entry'",
+			},
+			{
+				fieldname: "debit",
+				fieldtype: "Currency",
+				label: "Debit",
+				read_only: 1,
+			},
+			{
+				fieldname: "credit",
+				fieldtype: "Currency",
+				label: "Credit",
+				read_only: 1,
+			},
+			{
+				fieldname: "description",
+				fieldtype: "Small Text",
+				read_only: 1,
+			},
+			{
+				fieldname: "column_break_17",
+				fieldtype: "Column Break",
+				read_only: 1,
+			},
+			{
+				fieldname: "allocated_amount",
+				fieldtype: "Currency",
+				label: "Allocated Amount",
+				read_only: 1,
 			},
 
 			{
-				fieldname: "create_new_payment",
-				fieldtype: "Button",
-				label: "Add Payment Entry",
-				primary: 1,
-				depends_on: "eval:doc.action=='Add Payment Entry'",
-				click: () => {
-					frappe.call({
-						method:
-							"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.create_payment_entry_bts",
-						args: {
-							bank_transaction: me.bank_transaction.name,
-							transaction_id: me.dialog.get_value(
-								"transaction_id"
-							),
-							reference_number: me.dialog.get_value(
-								"reference_number"
-							),
-							reference_date: me.dialog.get_value(
-								"reference_date"
-							),
-							party_type: me.dialog.get_value("party_type"),
-							party: me.dialog.get_value("party"),
-							posting_date: me.dialog.get_value("posting_date"),
-							mode_of_payment: me.dialog.get_value(
-								"mode_of_payment"
-							),
-							project: me.dialog.get_value("project"),
-							cost_center: me.dialog.get_value("cost_center"),
-						},
-						callback(response) {
-							me.update_dt_cards();
-							me.dialog.hide();
-						},
-					});
-				},
+				fieldname: "unallocated_amount",
+				fieldtype: "Currency",
+				label: "Unallocated Amount",
+				read_only: 1,
 			},
 		];
 
@@ -425,6 +456,57 @@ erpnext.accounts.BankReconciliationDialogManager = class BankReconciliationDialo
 			title: __("Reconcile the Bank Transaction"),
 			fields: fields,
 			size: "large",
+			primary_action: (values) =>
+				this.reconciliation_dialog_primary_action(values),
+		});
+	}
+
+	reconciliation_dialog_primary_action(values) {
+		if (values.action == "Match Payment Entry") return;
+		if (values.action == "Add Payment Entry")
+			this.add_payment_entry(values);
+		else if (values.action == "Update Bank Transaction")
+			this.update_transaction(values);
+	}
+
+	add_payment_entry(values) {
+		frappe.call({
+			method:
+				"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.create_payment_entry_bts",
+			args: {
+				bank_transaction: this.bank_transaction.name,
+				transaction_id: values.transaction_id,
+				reference_number: values.reference_number,
+				reference_date: values.reference_date,
+				party_type: values.party_type,
+				party: values.party,
+				posting_date: values.posting_date,
+				mode_of_payment: values.mode_of_payment,
+				project: values.project,
+				cost_center: values.cost_center,
+			},
+			callback: (response) => {
+				this.update_dt_cards();
+				// me.dialog.hide();
+			},
+		});
+	}
+
+	update_transaction(values) {
+		frappe.call({
+			method:
+				"erpnext.accounts.page.bank_reconciliation_tool.bank_reconciliation_tool.update_bank_transaction",
+			args: {
+				bank_transaction: this.bank_transaction.name,
+				transaction_id: values.transaction_id,
+				reference_number: values.reference_number,
+				party_type: values.party_type,
+				party: values.party,
+			},
+			callback: (response) => {
+				this.update_dt_cards();
+				// me.dialog.hide();
+			},
 		});
 	}
 
