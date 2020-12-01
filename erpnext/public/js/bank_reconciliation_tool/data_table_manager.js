@@ -50,56 +50,69 @@ erpnext.accounts.BankReconciliationDataTableManager = class BankReconciliationDa
 			{
 				name: "Date",
 				editable: false,
+				width:100
 			},
-			{
-				name: "Deposit",
-				editable: false,
-			},
-			{
-				name: "Withdrawal",
-				editable: false,
-			},
+
 			{
 				name: "Party Type",
 				editable: false,
+				width:70
 			},
 			{
 				name: "Party",
 				editable: false,
+				width:100
 			},
 			{
 				name: "Description",
 				editable: false,
+				width:350
+			},
+			{
+				name: "<span style='color:blue;'>"+"Deposit" + "</span>",
+				editable: false,
+				width:100,
+				format: (value) => "<span style='color:blue;'>"+ format_currency(value, this.currency) +"</span>"
+			},
+			{
+				name: "<span style='color:purple;'>"+"Withdrawal"+"</span>",
+				editable: false,
+				width:100,
+				format: (value) =>  "<span style='color:purple;'>"+ format_currency(value, this.currency) +"</span>"
 			},
 			{
 				name: "Reference Number",
 				editable: false,
+				width:140
 			},
 			{
 				name: "Transaction Id",
 				editable: false,
+				width:140
 			},
 			{
-				name: "A",
+				name: "Actions",
 				editable: false,
 				resizable: false,
 				sortable: false,
 				focusable: false,
 				dropdown: false,
+				width:40
 			},
 		];
 	}
 
 	format_data(transactions) {
 		this.transactions = [];
+		this.currency  = transactions[0]["currency"]
 		transactions.forEach((row) => {
 			this.transactions.push([
 				row["date"],
-				row["debit"],
-				row["credit"],
 				row["party_type"],
 				row["party"],
 				row["description"],
+				row["debit"],
+				row["credit"],
 				row["reference_number"],
 				row["transaction_id"],
 				`
@@ -119,6 +132,7 @@ erpnext.accounts.BankReconciliationDataTableManager = class BankReconciliationDa
 			dynamicRowHeight: true,
 			checkboxColumn: false,
 			inlineFilters: true,
+			// layout: 'ratio',
 		};
 	}
 

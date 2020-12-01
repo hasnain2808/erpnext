@@ -25,13 +25,13 @@ erpnext.accounts.BankReconciliationNumberCardManager = class BankReconciliationN
 		var chart_data = [
 			{
 				value: me.bank_statement_closing_balance,
-				label: "Statement Ending Balance",
+				label: "Closing Balance as per Bank Statement",
 				datatype: "Currency",
 				currency: me.currency,
 			},
 			{
 				value: me.cleared_balance,
-				label: "Cleared Balance",
+				label: "Closing Balance as per ERP",
 				datatype: "Currency",
 				currency: me.currency,
 			},

@@ -9,7 +9,7 @@ erpnext.accounts.BankReconciliationController = class BankReconciliationControll
 			single_column: true,
 		});
 		this.upload_statement_button = this.page.set_secondary_action(
-			__("Upload a Statement"),
+			__("Upload Bank Statement"),
 			() =>
 				this.upload_statement_dialog_object.upload_statement_dialog.show()
 		);
