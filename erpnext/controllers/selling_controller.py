@@ -371,13 +371,13 @@ class SellingController(StockController):
 			self.set_pos_for_delivery_note()
 
 	def set_pos_for_sales_invoice(self):
-		po_nos = []
+		po_nos = [self.po_no] if self.po_no else []
 		self.get_po_nos('Sales Order', 'sales_order', po_nos)
 		self.get_po_nos('Delivery Note', 'delivery_note', po_nos)
 		self.po_no = ', '.join(list(set(x.strip() for x in ','.join(po_nos).split(','))))
 
 	def set_pos_for_delivery_note(self):
-		po_nos = []
+		po_nos = [self.po_no] if self.po_no else []
 		self.get_po_nos('Sales Order', 'against_sales_order', po_nos)
 		self.get_po_nos('Sales Invoice', 'against_sales_invoice', po_nos)
 		self.po_no = ', '.join(list(set(x.strip() for x in ','.join(po_nos).split(','))))
