@@ -450,15 +450,6 @@ def get_data():
 					"label": _("Bank Account"),
 					"name": "Bank Account",
 				},
-				{
-					"type": "doctype",
-					"name": "Bank Statement Transaction Entry",
-				},
-				{
-					"type": "doctype",
-					"label": _("Bank Statement Settings"),
-					"name": "Bank Statement Settings",
-				},
 			]
 		},
 		{
